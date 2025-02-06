@@ -1,136 +1,179 @@
-// Register.tsx
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
   TextInput,
-  StyleSheet,
   TouchableOpacity,
-  Animated,
+  StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
   ScrollView,
+  Alert,
 } from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
-export default function Register() {
-  const navigation = useNavigation();
-  const route = useRoute();
-  const slideAnim = React.useRef(new Animated.Value(100)).current;
-  const { userType } = route.params || { userType: 'student' };
+const THEME = {
+  dark: '#1A1A1A',
+  darker: '#121212',
+  accent: '#7C4DFF',
+  accentLight: '#9E7BFF',
+  card: '#242424',
+  text: '#FFFFFF',
+  textSecondary: '#B3B3B3',
+  success: '#4CAF50',
+  error: '#F44336',
+};
 
-  React.useEffect(() => {
-    Animated.spring(slideAnim, {
-      toValue: 0,
-      useNativeDriver: true,
-      tension: 20,
-      friction: 7,
-    }).start();
-  }, []);
+const RegisterScreen = ({ navigation }) => {
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [matricNumber, setMatricNumber] = useState('');
+  const [department, setDepartment] = useState('');
+  const [faculty, setFaculty] = useState('');
+  const [password, setPassword] = useState('');
+
+  const handleRegister = () => {
+    // Add your registration logic here
+    if (firstName && lastName && matricNumber && department && faculty && password) {
+      Alert.alert('Registration Successful', 'You can now log in.');
+      navigation.navigate('Login'); // Navigate to the Login screen
+    } else {
+      Alert.alert('Error', 'Please fill in all fields');
+    }
+  };
 
   return (
-    <ScrollView style={styles.scrollView}>
-      <Animated.View 
-        style={[
-          styles.container, 
-          { transform: [{ translateY: slideAnim }] }
-        ]}>
-        <Text style={styles.title}>{userType === 'lecturer' ? 'Lecturer Registration' : 'Student Registration'}</Text>
-        
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={styles.container}
+    >
+      <ScrollView contentContainerStyle={styles.scrollContainer}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Register</Text>
+          <Text style={styles.subtitle}>Create an account to get started.</Text>
+        </View>
+
         <View style={styles.inputContainer}>
           <TextInput
             style={styles.input}
-            placeholder="Full Name"
-            placeholderTextColor="#999"
+            placeholder="First Name"
+            placeholderTextColor={THEME.textSecondary}
+            value={firstName}
+            onChangeText={setFirstName}
           />
           <TextInput
             style={styles.input}
-            placeholder="Email"
-            placeholderTextColor="#999"
-            autoCapitalize="none"
+            placeholder="Last Name"
+            placeholderTextColor={THEME.textSecondary}
+            value={lastName}
+            onChangeText={setLastName}
           />
-          {userType === 'student' && (
-            <TextInput
-              style={styles.input}
-              placeholder="Student ID"
-              placeholderTextColor="#999"
-            />
-          )}
+          <TextInput
+            style={styles.input}
+            placeholder="Matric Number (e.g., FUO/20/CSI/1334)"
+            placeholderTextColor={THEME.textSecondary}
+            value={matricNumber}
+            onChangeText={setMatricNumber}
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="Department"
+            placeholderTextColor={THEME.textSecondary}
+            value={department}
+            onChangeText={setDepartment}
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="Faculty"
+            placeholderTextColor={THEME.textSecondary}
+            value={faculty}
+            onChangeText={setFaculty}
+          />
           <TextInput
             style={styles.input}
             placeholder="Password"
-            placeholderTextColor="#999"
-            secureTextEntry
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Confirm Password"
-            placeholderTextColor="#999"
+            placeholderTextColor={THEME.textSecondary}
+            value={password}
+            onChangeText={setPassword}
             secureTextEntry
           />
         </View>
 
-        <TouchableOpacity 
-          style={styles.registerButton}
-          onPress={() => navigation.navigate('Attendance')}>
-          <Text style={styles.registerButtonText}>Register</Text>
+        <TouchableOpacity style={styles.button} onPress={handleRegister}>
+          <Text style={styles.buttonText}>Register</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity 
-          style={styles.loginButton}
-          onPress={() => navigation.goBack()}>
-          <Text style={styles.loginText}>Already have an account? Login</Text>
-        </TouchableOpacity>
-      </Animated.View>
-    </ScrollView>
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>Already have an account?</Text>
+          <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+            <Text style={styles.footerLink}>Login</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
-}
+};
 
 const styles = StyleSheet.create({
-  scrollView: {
-    flex: 1,
-    backgroundColor: '#F5F5F5',
-  },
   container: {
     flex: 1,
+    backgroundColor: THEME.darker,
+  },
+  scrollContainer: {
+    flexGrow: 1,
+    justifyContent: 'center',
     padding: 20,
-    minHeight: 800,
+  },
+  header: {
+    marginBottom: 40,
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#6B46C1',
-    marginBottom: 30,
-    marginTop: 40,
-    textAlign: 'center',
+    fontSize: 32,
+    fontWeight: '700',
+    color: THEME.text,
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 16,
+    color: THEME.textSecondary,
   },
   inputContainer: {
-    gap: 15,
+    marginBottom: 24,
   },
   input: {
-    backgroundColor: 'white',
-    padding: 15,
-    borderRadius: 10,
+    backgroundColor: THEME.dark,
+    color: THEME.text,
+    padding: 16,
+    borderRadius: 8,
+    marginBottom: 16,
     fontSize: 16,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
   },
-  registerButton: {
-    backgroundColor: '#6B46C1',
-    padding: 15,
-    borderRadius: 10,
-    marginTop: 20,
+  button: {
+    backgroundColor: THEME.accent,
+    padding: 16,
+    borderRadius: 8,
+    alignItems: 'center',
   },
-  registerButtonText: {
-    color: 'white',
-    textAlign: 'center',
-    fontSize: 18,
+  buttonText: {
+    color: THEME.text,
+    fontSize: 16,
     fontWeight: '600',
   },
-  loginButton: {
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
     marginTop: 20,
   },
-  loginText: {
-    color: '#6B46C1',
-    textAlign: 'center',
-    fontSize: 16,
+  footerText: {
+    color: THEME.textSecondary,
+    fontSize: 14,
+  },
+  footerLink: {
+    color: THEME.accent,
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 4,
   },
 });
+
+export default RegisterScreen;

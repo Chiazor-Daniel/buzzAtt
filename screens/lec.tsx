@@ -1,4 +1,3 @@
-// screens/LecturerScreen.tsx
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -8,6 +7,7 @@ import {
   TouchableOpacity,
   Alert,
   StatusBar,
+  TextInput,
 } from 'react-native';
 import UdpSocket from 'react-native-udp';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -31,34 +31,57 @@ export function LecturerScreen() {
   const [session, setSession] = useState<Session | null>(null);
   const [presentStudents, setPresentStudents] = useState<StudentRecord[]>([]);
   const [connectionStatus, setConnectionStatus] = useState<string>('');
+  const [sessionName, setSessionName] = useState<string>('');
+  const [sessionDuration, setSessionDuration] = useState<string>('');
+  const [timeLeft, setTimeLeft] = useState<number>(0);
+  const [isCounting, setIsCounting] = useState<boolean>(false);
+  const [isSessionEnded, setIsSessionEnded] = useState<boolean>(false);
+  const [isSaved, setIsSaved] = useState<boolean>(false);
 
   useEffect(() => {
-    return () => {
-      closeSession();
-    };
-  }, []);
+    let timer: NodeJS.Timeout;
+    if (isCounting && timeLeft > 0) {
+      timer = setInterval(() => {
+        setTimeLeft((prev) => prev - 1);
+      }, 1000);
+    } else if (timeLeft === 0 && isCounting) {
+      endSession();
+    }
+    return () => clearInterval(timer);
+  }, [isCounting, timeLeft]);
 
-  const closeSession = () => {
+  const endSession = () => {
     if (session?.socket) {
       if (session.broadcastInterval) {
         clearInterval(session.broadcastInterval);
       }
       session.socket.close();
       setSession(null);
-      setPresentStudents([]);
-      setConnectionStatus('');
+      setIsCounting(false);
+      setIsSessionEnded(true);
     }
   };
 
   const startSession = () => {
+    if (!sessionName.trim()) {
+      Alert.alert('Error', 'Please enter a session name.');
+      return;
+    }
+
+    const duration = parseInt(sessionDuration, 10);
+    if (isNaN(duration) || duration <= 0 || duration > 30) {
+      Alert.alert('Error', 'Please enter a valid duration (1-30 seconds).');
+      return;
+    }
+
     const server = UdpSocket.createSocket('udp4');
     const sessionId = `SES${Math.floor(Math.random() * 10000)}`;
 
     server.on('message', (data: Buffer, rinfo: any) => {
       try {
         const studentData = JSON.parse(data.toString());
-        setPresentStudents(prev => {
-          if (!prev.find(student => student.id === studentData.id)) {
+        setPresentStudents((prev) => {
+          if (!prev.find((student) => student.id === studentData.id)) {
             const newStudent = {
               id: studentData.id,
               ip: rinfo.address,
@@ -84,8 +107,10 @@ export function LecturerScreen() {
 
     server.on('listening', () => {
       const port = server.address().port;
-      setConnectionStatus(`Session ${sessionId} active - Port ${port}`);
-      
+      setConnectionStatus(`Session ${sessionName} active - Port ${port}`);
+      setTimeLeft(duration);
+      setIsCounting(true);
+
       const broadcastInterval = setInterval(() => {
         server.send(
           JSON.stringify({ type: 'session-broadcast', sessionId, port }),
@@ -117,6 +142,20 @@ export function LecturerScreen() {
     }
   };
 
+  const saveAttendance = () => {
+    // Simulate saving attendance (replace with actual logic)
+    setIsSaved(true);
+    Alert.alert('Success', 'Attendance record saved successfully!');
+  };
+
+  const closeMonitor = () => {
+    setPresentStudents([]);
+    setIsSessionEnded(false);
+    setIsSaved(false);
+    setSessionName('');
+    setSessionDuration('');
+  };
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={THEME.darker} />
@@ -124,37 +163,54 @@ export function LecturerScreen() {
         title="Attendance Monitor"
         subtitle={session ? `${presentStudents.length} students present` : 'No active session'}
       />
-      
-      <View style={styles.sessionCard}>
-        <View style={styles.iconContainer}>
-          <Icon 
-            name={session ? 'access-point' : 'access-point-off'} 
-            size={40} 
-            color={session ? THEME.accent : THEME.textSecondary} 
-          />
-        </View>
-        <Text style={styles.sessionStatus}>
-          {session ? 'Session Active' : 'No Active Session'}
-        </Text>
-        <StatusBadge status={connectionStatus || 'No active session'} />
-      </View>
 
-      {!session ? (
-        <TouchableOpacity
-          style={[styles.actionButton, { backgroundColor: THEME.accent }]}
-          onPress={startSession}>
-          <Icon name="plus-circle" size={24} color={THEME.text} />
-          <Text style={styles.actionButtonText}>Start New Session</Text>
-        </TouchableOpacity>
+      {!session && !isSessionEnded ? (
+        <View style={styles.sessionSetup}>
+          <TextInput
+            style={styles.input}
+            placeholder="Enter Session Name (e.g., Course Name)"
+            placeholderTextColor={THEME.textSecondary}
+            value={sessionName}
+            onChangeText={setSessionName}
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="Enter Duration (1-30 seconds)"
+            placeholderTextColor={THEME.textSecondary}
+            value={sessionDuration}
+            onChangeText={setSessionDuration}
+            keyboardType="numeric"
+          />
+          <TouchableOpacity
+            style={[styles.actionButton, { backgroundColor: THEME.accent }]}
+            onPress={startSession}>
+            <Icon name="plus-circle" size={24} color={THEME.text} />
+            <Text style={styles.actionButtonText}>Start New Session</Text>
+          </TouchableOpacity>
+        </View>
       ) : (
         <View style={styles.sessionContent}>
+          <View style={styles.sessionCard}>
+            <View style={styles.iconContainer}>
+              <Icon
+                name={session ? 'access-point' : 'access-point-off'}
+                size={40}
+                color={session ? THEME.accent : THEME.textSecondary}
+              />
+            </View>
+            <Text style={styles.sessionStatus}>
+              {sessionName} - {timeLeft} seconds left
+            </Text>
+            <StatusBadge status={connectionStatus || 'No active session'} />
+          </View>
+
           <View style={styles.sectionHeader}>
             <Icon name="account-group" size={24} color={THEME.accent} />
             <Text style={styles.sectionTitle}>Present Students</Text>
           </View>
           <FlatList
             data={presentStudents}
-            keyExtractor={item => item.id}
+            keyExtractor={(item) => item.id}
             renderItem={({ item }) => <StudentListItem item={item} />}
             contentContainerStyle={styles.listContainer}
             ListEmptyComponent={
@@ -164,12 +220,32 @@ export function LecturerScreen() {
               </View>
             }
           />
-          <TouchableOpacity
-            style={[styles.actionButton, { backgroundColor: THEME.error }]}
-            onPress={closeSession}>
-            <Icon name="stop-circle" size={24} color={THEME.text} />
-            <Text style={styles.actionButtonText}>End Session</Text>
-          </TouchableOpacity>
+
+          {isSessionEnded && !isSaved ? (
+            <TouchableOpacity
+              style={[styles.actionButton, { backgroundColor: THEME.success }]}
+              onPress={saveAttendance}>
+              <Icon name="content-save" size={24} color={THEME.text} />
+              <Text style={styles.actionButtonText}>Save Attendance</Text>
+            </TouchableOpacity>
+          ) : isSaved ? (
+            <View style={styles.successContainer}>
+              <Text style={styles.successText}>Attendance saved successfully!</Text>
+              <TouchableOpacity
+                style={[styles.actionButton, { backgroundColor: THEME.error }]}
+                onPress={closeMonitor}>
+                <Icon name="close-circle" size={24} color={THEME.text} />
+                <Text style={styles.actionButtonText}>Close Monitor</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <TouchableOpacity
+              style={[styles.actionButton, { backgroundColor: THEME.error }]}
+              onPress={endSession}>
+              <Icon name="stop-circle" size={24} color={THEME.text} />
+              <Text style={styles.actionButtonText}>End Session</Text>
+            </TouchableOpacity>
+          )}
         </View>
       )}
     </View>
@@ -180,6 +256,17 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: THEME.darker,
+  },
+  sessionSetup: {
+    padding: 20,
+  },
+  input: {
+    backgroundColor: THEME.card,
+    color: THEME.text,
+    padding: 16,
+    borderRadius: 8,
+    marginBottom: 16,
+    fontSize: 16,
   },
   sessionCard: {
     backgroundColor: THEME.card,
@@ -256,5 +343,15 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginTop: 16,
     fontWeight: '500',
+  },
+  successContainer: {
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  successText: {
+    color: THEME.success,
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 16,
   },
 });

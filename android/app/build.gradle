@@ -85,6 +85,7 @@ android {
         versionCode 1
         versionName "1.0"
     }
+    
     signingConfigs {
         debug {
             storeFile file('debug.keystore')
@@ -92,7 +93,7 @@ android {
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
-    }
+    }   
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
@@ -117,3 +118,6 @@ dependencies {
         implementation jscFlavor
     }
 }
+
+
+apply from: "../../node_modules/react-native-vector-icons/fonts.gradle"

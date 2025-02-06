@@ -1,120 +1,224 @@
-// Login.tsx
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
   TextInput,
-  StyleSheet,
   TouchableOpacity,
-  Animated,
+  StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { loginUser, getProfile } from '../apis';
+import { useAuthStore } from '../store'; // Zustand store
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import DeviceInfo from 'react-native-device-info';
 
-export default function Login() {
-  const navigation = useNavigation();
-  const route = useRoute();
-  const fadeAnim = React.useRef(new Animated.Value(0)).current;
-  const { userType } = route.params || { userType: 'student' };
+const THEME = {
+  dark: '#1A1A1A',
+  darker: '#121212',
+  accent: '#7C4DFF',
+  accentLight: '#9E7BFF',
+  card: '#242424',
+  text: '#FFFFFF',
+  textSecondary: '#B3B3B3',
+  success: '#4CAF50',
+  error: '#F44336',
+};
 
-  React.useEffect(() => {
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 500,
-      useNativeDriver: true,
-    }).start();
-  }, []);
+const LoginScreen = ({ navigation }) => {
+  const [username, setUsername] = useState('test@gmail.com');
+  const [password, setPassword] = useState('test123456');
+  const [isLoading, setIsLoading] = useState(false);
 
+  const { setUser, setToken, setIsStudent, setStudentProfile } = useAuthStore();
+
+
+  const handleLogin = async () => {
+    if (!username || !password) {
+      Alert.alert('Error', 'Please fill in all fields');
+      return;
+    }
+  
+    setIsLoading(true);
+  
+    try {
+      const response = await loginUser({ username, password });
+  
+      if (response?.access_token) {
+        const token = response.access_token;
+        setToken(token);
+        await AsyncStorage.setItem('access_token', token);
+  
+        const profile = await getProfile(token);
+  
+        if (profile) {
+          const isStudent = profile.profile_type === 'student';
+  
+          setUser({
+            id: profile.id,
+            name: profile.name,
+            email: profile.email,
+            profileType: profile.profile_type,
+          });
+          setIsStudent(isStudent);
+  
+          await AsyncStorage.setItem(
+            'user',
+            JSON.stringify({
+              id: profile.id,
+              name: profile.name,
+              email: profile.email,
+              profileType: profile.profile_type,
+            })
+          );
+  
+          if (isStudent) {
+            const studentProfile = {
+              matricNumber: profile.matric_number,
+              deviceId: profile.device_id,
+              facultyId: profile.faculty_id,
+              departmentId: profile.department_id,
+              phoneNumber: profile.phone_number,
+              dateOfBirth: profile.date_of_birth,
+            };
+  
+            setStudentProfile(studentProfile);
+            await AsyncStorage.setItem('studentProfile', JSON.stringify(studentProfile));
+            console.log("profile saved")
+          }
+  
+          // Save MAC address (optional)
+          const macAddress = await DeviceInfo.getMacAddress();
+          await AsyncStorage.setItem('macAddress', macAddress);
+  
+          // Reset navigation stack to Main
+          navigation.reset({
+            index: 0,
+            routes: [{ name: 'Main' }],
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Login Failed:', error);
+      Alert.alert('Error', 'Invalid username or password');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  
   return (
-    <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
-      <Text style={styles.title}>{userType === 'lecturer' ? 'Lecturer Login' : 'Student Login'}</Text>
-      
-      <View style={styles.inputContainer}>
-        <TextInput
-          style={styles.input}
-          placeholder="Email"
-          placeholderTextColor="#999"
-          autoCapitalize="none"
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Password"
-          placeholderTextColor="#999"
-          secureTextEntry
-        />
-      </View>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={styles.container}
+    >
+      <ScrollView contentContainerStyle={styles.scrollContainer}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Login</Text>
+          <Text style={styles.subtitle}>Welcome back! Please sign in to continue.</Text>
+        </View>
 
-      <TouchableOpacity 
-        style={styles.loginButton}
-        onPress={() => navigation.navigate('Attendance')}>
-        <Text style={styles.loginButtonText}>Login</Text>
-      </TouchableOpacity>
+        <View style={styles.inputContainer}>
+          <TextInput
+            style={styles.input}
+            placeholder="Username"
+            placeholderTextColor={THEME.textSecondary}
+            value={username}
+            onChangeText={setUsername}
+            keyboardType="default"
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="Password"
+            placeholderTextColor={THEME.textSecondary}
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+          />
+        </View>
 
-      <TouchableOpacity 
-        style={styles.registerButton}
-        onPress={() => navigation.navigate('Register', { userType })}>
-        <Text style={styles.registerText}>Don't have an account? Register</Text>
-      </TouchableOpacity>
+        <TouchableOpacity style={styles.button} onPress={handleLogin} disabled={isLoading}>
+          {isLoading ? (
+            <ActivityIndicator color={THEME.text} />
+          ) : (
+            <Text style={styles.buttonText}>Login</Text>
+          )}
+        </TouchableOpacity>
 
-      <TouchableOpacity 
-        style={styles.anonymousButton}
-        onPress={() => navigation.navigate('Attendance')}>
-        <Text style={styles.anonymousText}>Continue Anonymously</Text>
-      </TouchableOpacity>
-    </Animated.View>
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>Don't have an account?</Text>
+          <TouchableOpacity onPress={() => navigation.navigate('Register')}>
+            <Text style={styles.footerLink}>Register</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
-}
+};
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: THEME.darker,
+  },
+  scrollContainer: {
+    flexGrow: 1,
     justifyContent: 'center',
+    padding: 20,
+  },
+  header: {
+    marginBottom: 40,
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#6B46C1',
-    marginBottom: 30,
-    textAlign: 'center',
+    fontSize: 32,
+    fontWeight: '700',
+    color: THEME.text,
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 16,
+    color: THEME.textSecondary,
   },
   inputContainer: {
-    gap: 15,
+    marginBottom: 24,
   },
   input: {
-    backgroundColor: 'white',
-    padding: 15,
-    borderRadius: 10,
+    backgroundColor: THEME.dark,
+    color: THEME.text,
+    padding: 16,
+    borderRadius: 8,
+    marginBottom: 16,
     fontSize: 16,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
   },
-  loginButton: {
-    backgroundColor: '#6B46C1',
-    padding: 15,
-    borderRadius: 10,
-    marginTop: 20,
+  button: {
+    backgroundColor: THEME.accent,
+    padding: 16,
+    borderRadius: 8,
+    alignItems: 'center',
   },
-  loginButtonText: {
-    color: 'white',
-    textAlign: 'center',
-    fontSize: 18,
+  buttonText: {
+    color: THEME.text,
+    fontSize: 16,
     fontWeight: '600',
   },
-  registerButton: {
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
     marginTop: 20,
   },
-  registerText: {
-    color: '#6B46C1',
-    textAlign: 'center',
-    fontSize: 16,
-  },
-  anonymousButton: {
-    marginTop: 15,
-  },
-  anonymousText: {
-    color: '#666',
-    textAlign: 'center',
+  footerText: {
+    color: THEME.textSecondary,
     fontSize: 14,
   },
+  footerLink: {
+    color: THEME.accent,
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 4,
+  },
 });
+
+export default LoginScreen;
