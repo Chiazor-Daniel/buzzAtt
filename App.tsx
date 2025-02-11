@@ -131,7 +131,7 @@ function MainTabs() {
         />
       </Tab.Navigator>
 
-      {/* Offline Mode Button */}
+      
       <TouchableOpacity
         style={styles.floatingButtonBottom}
         onPress={toggleScreen}
