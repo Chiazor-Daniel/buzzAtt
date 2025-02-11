@@ -35,28 +35,27 @@ const LoginScreen = ({ navigation }) => {
 
   const { setUser, setToken, setIsStudent, setStudentProfile } = useAuthStore();
 
-
   const handleLogin = async () => {
     if (!username || !password) {
       Alert.alert('Error', 'Please fill in all fields');
       return;
     }
-  
+
     setIsLoading(true);
-  
+
     try {
       const response = await loginUser({ username, password });
-  
+
       if (response?.access_token) {
         const token = response.access_token;
         setToken(token);
         await AsyncStorage.setItem('access_token', token);
-  
+
         const profile = await getProfile(token);
-  
+
         if (profile) {
           const isStudent = profile.profile_type === 'student';
-  
+
           setUser({
             id: profile.id,
             name: profile.name,
@@ -64,7 +63,7 @@ const LoginScreen = ({ navigation }) => {
             profileType: profile.profile_type,
           });
           setIsStudent(isStudent);
-  
+
           await AsyncStorage.setItem(
             'user',
             JSON.stringify({
@@ -74,7 +73,7 @@ const LoginScreen = ({ navigation }) => {
               profileType: profile.profile_type,
             })
           );
-  
+
           if (isStudent) {
             const studentProfile = {
               matricNumber: profile.matric_number,
@@ -84,16 +83,16 @@ const LoginScreen = ({ navigation }) => {
               phoneNumber: profile.phone_number,
               dateOfBirth: profile.date_of_birth,
             };
-  
+
             setStudentProfile(studentProfile);
             await AsyncStorage.setItem('studentProfile', JSON.stringify(studentProfile));
-            console.log("profile saved")
+            console.log('Profile saved');
           }
-  
+
           // Save MAC address (optional)
           const macAddress = await DeviceInfo.getMacAddress();
           await AsyncStorage.setItem('macAddress', macAddress);
-  
+
           // Reset navigation stack to Main
           navigation.reset({
             index: 0,
@@ -108,8 +107,56 @@ const LoginScreen = ({ navigation }) => {
       setIsLoading(false);
     }
   };
-  
-  
+
+  const handleQuickUse = async () => {
+    setIsLoading(true);
+
+    try {
+      // Generate dummy data
+      const dummyToken = 'access-token';
+      const dummyUser = {
+        id: 'me123',
+        name: 'Bruce Wayne',
+        email: 'dummy@example.com',
+        profileType: 'student', // or 'lecturer'
+      };
+      const dummyStudentProfile = {
+        matricNumber: '4456i',
+        deviceId: await DeviceInfo.getUniqueId(),
+        facultyId: 'faculty-id',
+        departmentId: '80-809999dnein',
+        phoneNumber: '123-456-7890',
+        dateOfBirth: '2000-01-01',
+      };
+
+      // Set Zustand store
+      setToken(dummyToken);
+      setUser(dummyUser);
+      setIsStudent(dummyUser.profileType === 'student');
+      setStudentProfile(dummyStudentProfile);
+
+      // Save to AsyncStorage
+      await AsyncStorage.setItem('access_token', dummyToken);
+      await AsyncStorage.setItem('user', JSON.stringify(dummyUser));
+      await AsyncStorage.setItem('studentProfile', JSON.stringify(dummyStudentProfile));
+
+      // Save MAC address (optional)
+      const macAddress = await DeviceInfo.getMacAddress();
+      await AsyncStorage.setItem('macAddress', macAddress);
+
+      // Reset navigation stack to Main
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Main' }],
+      });
+    } catch (error) {
+      console.error('Quick Use Failed:', error);
+      Alert.alert('Error', 'Failed to set up quick use.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -146,6 +193,10 @@ const LoginScreen = ({ navigation }) => {
           ) : (
             <Text style={styles.buttonText}>Login</Text>
           )}
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.quickUseButton} onPress={handleQuickUse} disabled={isLoading}>
+          <Text style={styles.quickUseButtonText}>Quick Use</Text>
         </TouchableOpacity>
 
         <View style={styles.footer}>
@@ -198,8 +249,21 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 8,
     alignItems: 'center',
+    marginBottom: 16,
   },
   buttonText: {
+    color: THEME.text,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  quickUseButton: {
+    backgroundColor: THEME.card,
+    padding: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  quickUseButtonText: {
     color: THEME.text,
     fontSize: 16,
     fontWeight: '600',

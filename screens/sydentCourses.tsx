@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useAuthStore } from '../store';
-import { getStudentCourses, enrollInCourse, getAvailableClasses, getSchedules } from '../apis';
+import { getAvailableClasses, getSchedules, enrollInCourse } from '../apis';
 
 const THEME = {
   dark: '#1A1A1A',
@@ -15,33 +15,22 @@ const THEME = {
 };
 
 export function StudentCourseScreen({ navigation }) {
-  const { studentProfile } = useAuthStore();
-  const [enrolledCourses, setEnrolledCourses] = useState([]);
   const [availableClasses, setAvailableClasses] = useState([]);
   const [schedules, setSchedules] = useState([]);
   const [selectedCourseId, setSelectedCourseId] = useState(null);
-
-  // Fetch enrolled courses
-  useEffect(() => {
-    const fetchEnrolledCourses = async () => {
-      try {
-        const courses = await getStudentCourses();
-        setEnrolledCourses(courses);
-      } catch (error) {
-        Alert.alert('Error', 'Failed to fetch enrolled courses.');
-      }
-    };
-    fetchEnrolledCourses();
-  }, []);
+  const [loading, setLoading] = useState(false);
 
   // Fetch available classes
   useEffect(() => {
     const fetchAvailableClasses = async () => {
+      setLoading(true);
       try {
         const classes = await getAvailableClasses();
         setAvailableClasses(classes);
       } catch (error) {
         Alert.alert('Error', 'Failed to fetch available classes.');
+      } finally {
+        setLoading(false);
       }
     };
     fetchAvailableClasses();
@@ -49,44 +38,40 @@ export function StudentCourseScreen({ navigation }) {
 
   // Fetch schedules for a specific course
   const fetchSchedules = async (classroomId) => {
+    setLoading(true);
     try {
       const schedules = await getSchedules(classroomId);
       setSchedules(schedules);
       setSelectedCourseId(classroomId);
     } catch (error) {
       Alert.alert('Error', 'Failed to fetch schedules.');
+    } finally {
+      setLoading(false);
     }
   };
 
   // Enroll in a course
   const handleEnroll = async (availableClassId) => {
+    setLoading(true);
     try {
       const response = await enrollInCourse(availableClassId);
       if (response.is_enrolled) {
         Alert.alert('Success', 'You have successfully enrolled in the course.');
-        // Refresh enrolled courses
-        const courses = await getStudentCourses();
-        setEnrolledCourses(courses);
+        // Refresh available classes if necessary
+        const classes = await getAvailableClasses();
+        setAvailableClasses(classes);
       }
     } catch (error) {
       Alert.alert('Error', 'Failed to enroll in the course.');
+    } finally {
+      setLoading(false);
     }
   };
-
-  // Render enrolled courses
-  const renderEnrolledCourse = ({ item }) => (
-    <TouchableOpacity
-      style={styles.card}
-      onPress={() => fetchSchedules(item.id)}
-    >
-      <Text style={styles.courseName}>{item.name}</Text>
-      <Text style={styles.courseDescription}>{item.description}</Text>
-    </TouchableOpacity>
-  );
 
   // Render available classes
   const renderAvailableClass = ({ item }) => (
     <View style={styles.card}>
+      <Icon name="school" size={24} color={THEME.accent} />
       <Text style={styles.courseName}>{item.classroom_id}</Text>
       <TouchableOpacity
         style={styles.enrollButton}
@@ -100,36 +85,47 @@ export function StudentCourseScreen({ navigation }) {
   // Render schedules
   const renderSchedule = ({ item }) => (
     <View style={styles.card}>
+      <Icon name="calendar" size={24} color={THEME.accent} />
       <Text style={styles.scheduleText}>Start: {new Date(item.start_time).toLocaleString()}</Text>
       <Text style={styles.scheduleText}>End: {new Date(item.end_time).toLocaleString()}</Text>
       <Text style={styles.scheduleText}>Description: {item.description}</Text>
     </View>
   );
 
+  // Render loading indicator
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={THEME.accent} />
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Enrolled Courses</Text>
-      <FlatList
-        data={enrolledCourses}
-        renderItem={renderEnrolledCourse}
-        keyExtractor={(item) => item.id}
-      />
-
       <Text style={styles.title}>Available Classes</Text>
-      <FlatList
-        data={availableClasses}
-        renderItem={renderAvailableClass}
-        keyExtractor={(item) => item.id}
-      />
+      {availableClasses.length > 0 ? (
+        <FlatList
+          data={availableClasses}
+          renderItem={renderAvailableClass}
+          keyExtractor={(item) => item.id}
+        />
+      ) : (
+        <Text style={styles.noDataText}>No available classes found.</Text>
+      )}
 
       {selectedCourseId && (
         <>
           <Text style={styles.title}>Schedules for Selected Course</Text>
-          <FlatList
-            data={schedules}
-            renderItem={renderSchedule}
-            keyExtractor={(item) => item.id}
-          />
+          {schedules.length > 0 ? (
+            <FlatList
+              data={schedules}
+              renderItem={renderSchedule}
+              keyExtractor={(item) => item.id}
+            />
+          ) : (
+            <Text style={styles.noDataText}>No schedules found for this course.</Text>
+          )}
         </>
       )}
     </View>
@@ -142,34 +138,39 @@ const styles = StyleSheet.create({
     backgroundColor: THEME.darker,
     padding: 16,
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: THEME.darker,
+  },
   title: {
     fontSize: 20,
     fontWeight: 'bold',
     color: THEME.text,
     marginBottom: 16,
+    marginTop: 16,
   },
   card: {
     backgroundColor: THEME.card,
     borderRadius: 8,
     padding: 16,
     marginBottom: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   courseName: {
     fontSize: 16,
     fontWeight: '600',
     color: THEME.text,
-  },
-  courseDescription: {
-    fontSize: 14,
-    color: THEME.textSecondary,
-    marginTop: 8,
+    marginLeft: 16,
   },
   enrollButton: {
     backgroundColor: THEME.accent,
     padding: 8,
     borderRadius: 4,
     alignItems: 'center',
-    marginTop: 8,
+    marginLeft: 'auto',
   },
   enrollButtonText: {
     color: THEME.text,
@@ -178,6 +179,12 @@ const styles = StyleSheet.create({
   scheduleText: {
     fontSize: 14,
     color: THEME.textSecondary,
-    marginTop: 4,
+    marginLeft: 16,
+  },
+  noDataText: {
+    fontSize: 14,
+    color: THEME.textSecondary,
+    textAlign: 'center',
+    marginTop: 16,
   },
 });

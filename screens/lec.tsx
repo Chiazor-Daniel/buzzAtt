@@ -69,7 +69,7 @@ export function LecturerScreen() {
     }
 
     const duration = parseInt(sessionDuration, 10);
-    if (isNaN(duration) || duration <= 0 || duration > 30) {
+    if (isNaN(duration) || duration <= 0 || duration > 200) {
       Alert.alert('Error', 'Please enter a valid duration (1-30 seconds).');
       return;
     }

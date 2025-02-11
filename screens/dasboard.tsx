@@ -5,12 +5,12 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Dimensions,
-  Animated,
+  ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useAuthStore } from '../store';
-import { getStudentClassroom, getCourses, getAttendance } from '../apis';
+import { getStudentClassroom, getCourses, getSchedules } from '../apis';
 
 const THEME = {
   dark: '#1A1A1A',
@@ -32,69 +32,81 @@ const StatCard = ({ icon, title, value, trend, color }) => (
       <Text style={styles.statTitle}>{title}</Text>
     </View>
     <Text style={styles.statValue}>{value}</Text>
-    {trend && (
-      <View style={styles.trendContainer}>
-        <Icon 
-          name={trend > 0 ? 'trending-up' : 'trending-down'} 
-          size={16} 
-          color={trend > 0 ? THEME.success : THEME.error} 
-        />
-        <Text style={[styles.trendText, { color: trend > 0 ? THEME.success : THEME.error }]}>
-          {Math.abs(trend)}% from last month
-        </Text>
-      </View>
-    )}
   </View>
 );
 
 const UpcomingCard = ({ title, subtitle, time, type, navigation }) => (
-    <TouchableOpacity 
-      style={styles.upcomingCard}
-      onPress={() => navigation.navigate('Student', { title, subtitle, time, type })}
-    >
-      <View style={styles.upcomingLeft}>
-        <Icon 
-          name={type === 'class' ? 'book-open-variant' : 'clock-check'} 
-          size={24} 
-          color={THEME.accent} 
-        />
-        <View style={styles.upcomingInfo}>
-          <Text style={styles.upcomingTitle}>{title}</Text>
-          <Text style={styles.upcomingSubtitle}>{subtitle}</Text>
-        </View>
+  <TouchableOpacity
+    style={styles.upcomingCard}
+    onPress={() => navigation.navigate('Student', { title, subtitle, time, type })}
+  >
+    <View style={styles.upcomingLeft}>
+      <Icon
+        name={type === 'class' ? 'book-open-variant' : 'clock-check'}
+        size={24}
+        color={THEME.accent}
+      />
+      <View style={styles.upcomingInfo}>
+        <Text style={styles.upcomingTitle}>{title}</Text>
+        <Text style={styles.upcomingSubtitle}>{subtitle}</Text>
       </View>
-      <View style={styles.upcomingRight}>
-        <Text style={styles.upcomingTime}>{time}</Text>
-        <Icon name="chevron-right" size={20} color={THEME.textSecondary} />
-      </View>
-    </TouchableOpacity>
-  );
+    </View>
+    <View style={styles.upcomingRight}>
+      <Text style={styles.upcomingTime}>{time}</Text>
+      <Icon name="chevron-right" size={20} color={THEME.textSecondary} />
+    </View>
+  </TouchableOpacity>
+);
 
-export function DashboardScreen({navigation}) {
+export function DashboardScreen({ navigation }) {
   const { isStudent, studentProfile } = useAuthStore();
   const [stats, setStats] = useState({
     totalClasses: 0,
     attendanceRate: 0,
     upcomingEvents: [],
   });
-
-//   useEffect(() => {
-//     fetchDashboardData();
-//   }, []);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState(null);
 
   const fetchDashboardData = async () => {
+    if (!refreshing) setLoading(true);
     try {
       if (isStudent) {
-        const classes = await getStudentClassroom();
-        // Process student data
+        const courses = await getStudentClassroom();
+        const schedules = courses.length > 0 ? await getSchedules(courses[0]?.id) : [];
+        setStats({
+          totalClasses: courses.length,
+          attendanceRate: 0,
+          upcomingEvents: schedules,
+        });
       } else {
         const courses = await getCourses();
-        const attendance = await getAttendance();
-        // Process lecturer data
+        const schedules = courses.length > 0 ? await getSchedules(courses[0]?.id) : [];
+        setStats({
+          totalClasses: courses.length,
+          attendanceRate: 0,
+          upcomingEvents: schedules,
+        });
       }
-    } catch (error) {
-      console.error('Error fetching dashboard data:', error);
+      setError(null);
+    } catch (err) {
+      setError('Failed to fetch data');
+      console.error('Error fetching dashboard data:', err);
+      // Keep existing stats instead of clearing them
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
     }
+  };
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchDashboardData();
   };
 
   const renderStudentDashboard = () => (
@@ -103,21 +115,19 @@ export function DashboardScreen({navigation}) {
         <StatCard
           icon="calendar-check"
           title="Attendance Rate"
-          value="87%"
-          trend={2.5}
+          value={`${stats.attendanceRate}%`}
           color={THEME.success}
         />
         <StatCard
           icon="book-open-page-variant"
           title="Total Classes"
-          value="24"
+          value={stats.totalClasses}
           color={THEME.accent}
         />
         <StatCard
           icon="clock-alert"
           title="Missed Classes"
-          value="3"
-          trend={-1.2}
+          value="0"
           color={THEME.error}
         />
       </View>
@@ -125,20 +135,29 @@ export function DashboardScreen({navigation}) {
         <Icon name="calendar-clock" size={24} color={THEME.accent} />
         <Text style={styles.sectionTitle}>Upcoming Classes</Text>
       </View>
-      <UpcomingCard
-        title="Software Engineering"
-        subtitle="Room 401"
-        time="9:00 AM"
-        type="class"
-        navigation={navigation}
-      />
-      <UpcomingCard
-        title="Database Systems"
-        subtitle="Lab 3"
-        time="2:30 PM"
-        type="class"
-        navigation={navigation}
-      />
+      {error ? (
+        <View style={styles.errorBanner}>
+          <Icon name="alert-circle" size={20} color={THEME.error} />
+          <Text style={styles.errorText}>{error}</Text>
+          <TouchableOpacity onPress={fetchDashboardData}>
+            <Text style={styles.retryText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      ) : null}
+      {stats.upcomingEvents.length > 0 ? (
+        stats.upcomingEvents.map((event, index) => (
+          <UpcomingCard
+            key={index}
+            title={event.description}
+            subtitle={`Room ${event.classroom_id.slice(0, 4)}`}
+            time={new Date(event.start_time).toLocaleTimeString()}
+            type="class"
+            navigation={navigation}
+          />
+        ))
+      ) : (
+        <Text style={styles.noDataText}>No upcoming classes found.</Text>
+      )}
     </>
   );
 
@@ -154,14 +173,13 @@ export function DashboardScreen({navigation}) {
         <StatCard
           icon="chart-line"
           title="Avg. Attendance"
-          value="92%"
-          trend={3.8}
+          value={`${stats.attendanceRate}%`}
           color={THEME.success}
         />
         <StatCard
           icon="book-multiple"
           title="Active Courses"
-          value="4"
+          value={stats.totalClasses}
           color={THEME.warning}
         />
       </View>
@@ -169,37 +187,64 @@ export function DashboardScreen({navigation}) {
         <Icon name="calendar-check" size={24} color={THEME.accent} />
         <Text style={styles.sectionTitle}>Today's Schedule</Text>
       </View>
-      <UpcomingCard
-        title="CSC 301 Lecture"
-        subtitle="45 Students"
-        time="10:00 AM"
-        type="class"
-        navigation={navigation}
-      />
-      <UpcomingCard
-        title="Attendance Session"
-        subtitle="CSC 405"
-        time="2:00 PM"
-        type="attendance"
-        navigation={navigation}
-      />
+      {error ? (
+        <View style={styles.errorBanner}>
+          <Icon name="alert-circle" size={20} color={THEME.error} />
+          <Text style={styles.errorText}>{error}</Text>
+          <TouchableOpacity onPress={fetchDashboardData}>
+            <Text style={styles.retryText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      ) : null}
+      {stats.upcomingEvents.length > 0 ? (
+        stats.upcomingEvents.map((event, index) => (
+          <UpcomingCard
+            key={index}
+            title={event.description}
+            subtitle={`${event.classroom_id.slice(0, 4)} Students`}
+            time={new Date(event.start_time).toLocaleTimeString()}
+            type="class"
+            navigation={navigation}
+          />
+        ))
+      ) : (
+        <Text style={styles.noDataText}>No schedules found for today.</Text>
+      )}
     </>
   );
 
+  if (loading && !refreshing) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={THEME.accent} />
+      </View>
+    );
+  }
+
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView
+      style={styles.container}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          colors={[THEME.accent]}
+          tintColor={THEME.accent}
+        />
+      }
+    >
       <View style={styles.header}>
         <View>
           <Text style={styles.greeting}>Welcome back,</Text>
           <Text style={styles.name}>
-            {!isStudent ? studentProfile?.matricNumber || 'Student' : 'Lecturer'}
+            {isStudent ? studentProfile?.matricNumber || 'Student' : 'Lecturer'}
           </Text>
         </View>
         <TouchableOpacity style={styles.profileButton}>
           <Icon name="account-circle" size={40} color={THEME.accent} />
         </TouchableOpacity>
       </View>
-      {!isStudent ? renderStudentDashboard() : renderLecturerDashboard()}
+      {isStudent ? renderStudentDashboard() : renderLecturerDashboard()}
     </ScrollView>
   );
 }
@@ -311,4 +356,63 @@ const styles = StyleSheet.create({
     color: THEME.accent,
     marginRight: 8,
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: THEME.darker,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: THEME.darker,
+    padding: 20,
+  },
+  errorText: {
+    fontSize: 16,
+    color: THEME.text,
+    marginTop: 16,
+    textAlign: 'center',
+  },
+  retryButton: {
+    marginTop: 20,
+    padding: 12,
+    backgroundColor: THEME.accent,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    fontSize: 16,
+    color: THEME.text,
+    fontWeight: '600',
+  },
+  noDataText: {
+    fontSize: 14,
+    color: THEME.textSecondary,
+    textAlign: 'center',
+    marginTop: 16,
+  },
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(244, 67, 54, 0.1)',
+    marginHorizontal: 20,
+    marginBottom: 12,
+    padding: 12,
+    borderRadius: 8,
+  },
+  errorText: {
+    flex: 1,
+    fontSize: 14,
+    color: THEME.error,
+    marginLeft: 8,
+  },
+  retryText: {
+    fontSize: 14,
+    color: THEME.accent,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
 });
+
+export default DashboardScreen;

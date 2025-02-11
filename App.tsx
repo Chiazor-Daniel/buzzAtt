@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, useNavigationBuilder } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { SafeAreaView, StatusBar, StyleSheet, View, ActivityIndicator, TouchableOpacity, Alert } from 'react-native';
@@ -17,6 +17,7 @@ import RegisterScreen from './screens/register';
 import { getProfile } from './apis';
 import DeviceInfo from 'react-native-device-info';
 import { DashboardScreen } from './screens/dasboard';
+import { useNavigation } from '@react-navigation/native';
 import { StudentCourseScreen } from './screens/sydentCourses';
 
 const Stack = createNativeStackNavigator();
@@ -35,14 +36,14 @@ const THEME = {
 const queryClient = new QueryClient();
 
 function MainTabs() {
-  const { isStudent } = useAuthStore();
-  const [showDashboard, setShowDashboard] = useState(true); // Default to showing Dashboard
+  const navigation = useNavigation()
+  const { isStudent, setIsStudent } = useAuthStore();
+  const [showDashboard, setShowDashboard] = useState(true);
 
   const toggleScreen = () => {
     setShowDashboard((prev) => {
       const newState = !prev;
 
-      // Show an alert when switching to offline mode
       if (!newState) {
         Alert.alert(
           "Offline Mode",
@@ -53,6 +54,26 @@ function MainTabs() {
 
       return newState;
     });
+  };
+
+  const toggleMode = () => {
+    Alert.alert(
+      "Switch Mode",
+      `Switch to ${isStudent ? 'Lecturer' : 'Student'} mode?`,
+      [
+        {
+          text: "Cancel",
+          style: "cancel"
+        },
+        {
+          text: "Switch",
+          onPress: () => {
+            setIsStudent(!isStudent);
+            AsyncStorage.setItem('isStudent', (!isStudent).toString());
+          }
+        }
+      ]
+    );
   };
 
   return (
@@ -81,13 +102,13 @@ function MainTabs() {
       >
         <Tab.Screen
           name="Dashboard"
-          component={showDashboard ? DashboardScreen : (!isStudent ? StudentScreen : LecturerScreen)}
+          component={showDashboard ? DashboardScreen : (isStudent ? StudentScreen : LecturerScreen)}
           options={{
             tabBarIcon: ({ color }) => <Icon name="view-dashboard" size={24} color={color} />,
-            title: 'Dashboard',
+            title: `${isStudent ? 'Student' : 'Lecturer'} Dashboard`,
           }}
         />
-         <Tab.Screen
+        <Tab.Screen
           name="Courses"
           component={StudentCourseScreen}
           options={{
@@ -110,13 +131,25 @@ function MainTabs() {
         />
       </Tab.Navigator>
 
-      {/* Floating Toggle Button */}
+      {/* Offline Mode Button */}
       <TouchableOpacity
-        style={styles.floatingButton}
+        style={styles.floatingButtonBottom}
         onPress={toggleScreen}
       >
         <Icon
           name={showDashboard ? (isStudent ? 'wifi-off' : 'wifi-off') : 'view-dashboard'}
+          size={24}
+          color={THEME.text}
+        />
+      </TouchableOpacity>
+
+      {/* Mode Switch Button */}
+      <TouchableOpacity
+        style={styles.floatingButtonMiddle}
+        onPress={toggleMode}
+      >
+        <Icon
+          name={isStudent ? "person" : "user-ninja"}
           size={24}
           color={THEME.text}
         />
@@ -138,12 +171,18 @@ const App = () => {
         const savedToken = await AsyncStorage.getItem('access_token');
         const savedUser = await AsyncStorage.getItem('user');
         const savedStudentProfile = await AsyncStorage.getItem('studentProfile');
+        const savedIsStudent = await AsyncStorage.getItem('isStudent');
 
         if (savedToken && savedUser) {
           const user = JSON.parse(savedUser);
           setToken(savedToken);
           setUser(user);
-          setIsStudent(user.profileType === 'student');
+          
+          if (savedIsStudent !== null) {
+            setIsStudent(savedIsStudent === 'true');
+          } else {
+            setIsStudent(user.profileType === 'student');
+          }
 
           if (savedStudentProfile) {
             setStudentProfile(JSON.parse(savedStudentProfile));
@@ -230,10 +269,10 @@ const App = () => {
                   options={{ title: 'Attendance Monitor' }}
                 />
                 <Stack.Screen
-  name="StudentCourse"
-  component={StudentCourseScreen}
-  options={{ title: 'Course Management' }}
-/>
+                  name="StudentCourse"
+                  component={StudentCourseScreen}
+                  options={{ title: 'Course Management' }}
+                />
               </>
             )}
           </Stack.Navigator>
@@ -254,7 +293,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  floatingButton: {
+  floatingButtonBottom: {
     position: 'absolute',
     bottom: 50,
     right: 20,
@@ -269,6 +308,23 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 3,
+  },
+  floatingButtonMiddle: {
+    position: 'absolute',
+    top: '50%',
+    right: 20,
+    backgroundColor: THEME.accent,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+    transform: [{ translateY: -25 }], // Center the button vertically
   },
 });
 
