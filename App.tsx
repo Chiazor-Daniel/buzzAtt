@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { NavigationContainer, useNavigationBuilder } from '@react-navigation/native';
+import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { SafeAreaView, StatusBar, StyleSheet, View, ActivityIndicator, TouchableOpacity, Alert } from 'react-native';
@@ -7,6 +7,7 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useAuthStore } from './store';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import DeviceInfo from 'react-native-device-info';
 
 import { LecturerScreen } from './screens/lec';
 import { StudentScreen } from './screens/stud';
@@ -15,9 +16,7 @@ import ProfileScreen from './screens/profile';
 import LoginScreen from './screens/login';
 import RegisterScreen from './screens/register';
 import { getProfile } from './apis';
-import DeviceInfo from 'react-native-device-info';
 import { DashboardScreen } from './screens/dasboard';
-import { useNavigation } from '@react-navigation/native';
 import { StudentCourseScreen } from './screens/sydentCourses';
 
 const Stack = createNativeStackNavigator();
@@ -36,14 +35,12 @@ const THEME = {
 const queryClient = new QueryClient();
 
 function MainTabs() {
-  const navigation = useNavigation()
   const { isStudent, setIsStudent } = useAuthStore();
   const [showDashboard, setShowDashboard] = useState(true);
 
   const toggleScreen = () => {
     setShowDashboard((prev) => {
       const newState = !prev;
-
       if (!newState) {
         Alert.alert(
           "Offline Mode",
@@ -51,7 +48,6 @@ function MainTabs() {
           [{ text: "OK", onPress: () => console.log("Alert dismissed") }]
         );
       }
-
       return newState;
     });
   };
@@ -108,7 +104,7 @@ function MainTabs() {
             title: `${isStudent ? 'Student' : 'Lecturer'} Dashboard`,
           }}
         />
-        <Tab.Screen
+        {/* <Tab.Screen
           name="Courses"
           component={StudentCourseScreen}
           options={{
@@ -121,7 +117,7 @@ function MainTabs() {
           options={{
             tabBarIcon: ({ color }) => <Icon name="history" size={24} color={color} />,
           }}
-        />
+        /> */}
         <Tab.Screen
           name="Profile"
           component={ProfileScreen}
@@ -131,7 +127,6 @@ function MainTabs() {
         />
       </Tab.Navigator>
 
-      
       <TouchableOpacity
         style={styles.floatingButtonBottom}
         onPress={toggleScreen}
@@ -143,7 +138,6 @@ function MainTabs() {
         />
       </TouchableOpacity>
 
-      {/* Mode Switch Button */}
       <TouchableOpacity
         style={styles.floatingButtonMiddle}
         onPress={toggleMode}
@@ -159,58 +153,72 @@ function MainTabs() {
 }
 
 const App = () => {
-  const { token, setToken, studentProfile, setStudentProfile, setIsStudent, isStudent, setUser } = useAuthStore();
+  const { token, initializeStore } = useAuthStore();
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const checkAuth = async () => {
-      const macAddress = await DeviceInfo.getMacAddress();
-      await AsyncStorage.setItem('macAddress', macAddress);
-
+    const initializeApp = async () => {
       try {
-        const savedToken = await AsyncStorage.getItem('access_token');
-        const savedUser = await AsyncStorage.getItem('user');
-        const savedStudentProfile = await AsyncStorage.getItem('studentProfile');
-        const savedIsStudent = await AsyncStorage.getItem('isStudent');
+        // Get all cached values at once
+        const [
+          macAddress,
+          savedToken,
+          savedUser,
+          savedStudentProfile,
+          savedIsStudent
+        ] = await Promise.all([
+          DeviceInfo.getMacAddress(),
+          AsyncStorage.getItem('access_token'),
+          AsyncStorage.getItem('user'),
+          AsyncStorage.getItem('studentProfile'),
+          AsyncStorage.getItem('isStudent')
+        ]);
+
+        // Save MAC address
+        await AsyncStorage.setItem('macAddress', macAddress);
 
         if (savedToken && savedUser) {
           const user = JSON.parse(savedUser);
-          setToken(savedToken);
-          setUser(user);
-          
-          if (savedIsStudent !== null) {
-            setIsStudent(savedIsStudent === 'true');
-          } else {
-            setIsStudent(user.profileType === 'student');
-          }
+          const initialState: any = {
+            token: savedToken,
+            user,
+            macAddress,
+            isStudent: savedIsStudent !== null ? savedIsStudent === 'true' : user.profileType === 'student'
+          };
 
           if (savedStudentProfile) {
-            setStudentProfile(JSON.parse(savedStudentProfile));
-          } else if (!savedStudentProfile) {
-            const profile = await getProfile('student');
-            if (profile) {
-              const formattedProfile = {
-                matricNumber: profile.matric_number,
-                deviceId: profile.device_id,
-                facultyId: profile.faculty_id,
-                departmentId: profile.department_id,
-                phoneNumber: profile.phone_number,
-                dateOfBirth: profile.date_of_birth,
-              };
-
-              setStudentProfile(formattedProfile);
-              await AsyncStorage.setItem('studentProfile', JSON.stringify(formattedProfile));
+            initialState.studentProfile = JSON.parse(savedStudentProfile);
+          } else {
+            try {
+              const profile = await getProfile('student');
+              if (profile) {
+                const formattedProfile = {
+                  matricNumber: profile.matric_number,
+                  deviceId: profile.device_id,
+                  facultyId: profile.faculty_id,
+                  departmentId: profile.department_id,
+                  phoneNumber: profile.phone_number,
+                  dateOfBirth: profile.date_of_birth,
+                };
+                initialState.studentProfile = formattedProfile;
+                await AsyncStorage.setItem('studentProfile', JSON.stringify(formattedProfile));
+              }
+            } catch (error) {
+              console.error('Error fetching student profile:', error);
             }
           }
+
+          // Initialize store with all cached values at once
+          initializeStore(initialState);
         }
       } catch (error) {
-        console.error('Error checking authentication:', error);
+        console.error('Error initializing app:', error);
       } finally {
         setIsLoading(false);
       }
     };
 
-    checkAuth();
+    initializeApp();
   }, []);
 
   if (isLoading) {
@@ -324,7 +332,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 3,
-    transform: [{ translateY: -25 }], // Center the button vertically
+    transform: [{ translateY: -25 }],
   },
 });
 
