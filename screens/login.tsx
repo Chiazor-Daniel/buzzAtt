@@ -19,11 +19,13 @@ import DeviceInfo from 'react-native-device-info';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { THEME, SPACING, FONTS, FONT_SIZES } from '../theme';
 import { SCREEN_NAMES } from '../navigation/config';
+import ZeroconfTest from './ZeroconfTest';
 
 type RootStackParamList = {
   [SCREEN_NAMES.LOGIN]: undefined;
   [SCREEN_NAMES.REGISTER]: undefined;
   [SCREEN_NAMES.MAIN_TABS]: undefined;
+  ZeroconfTest: undefined;
 };
 
 type LoginScreenProps = {
@@ -248,6 +250,13 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
           <Text style={styles.registerButtonText}>
             Don't have an account? <Text style={styles.registerButtonTextBold}>Register</Text>
           </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.button, { backgroundColor: THEME.accent, marginTop: 20 }]}
+          onPress={() => navigation.navigate('ZeroconfTest')}
+        >
+          <Text style={styles.buttonText}>Go to Test Screen</Text>
         </TouchableOpacity>
       </ScrollView>
     </KeyboardAvoidingView>

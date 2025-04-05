@@ -17,6 +17,7 @@ import ProfileScreen from './screens/profile';
 import LoginScreen from './screens/login';
 import RegisterScreen from './screens/register';
 import DashboardScreen from './screens/dasboard';
+import ZeroconfTest from './screens/ZeroconfTest';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -144,6 +145,7 @@ const App = () => {
             <Stack.Screen name={SCREEN_NAMES.LOGIN} component={LoginScreen} />
             <Stack.Screen name={SCREEN_NAMES.REGISTER} component={RegisterScreen} />
             <Stack.Screen name={SCREEN_NAMES.MAIN_TABS} component={MainTabs} />
+            <Stack.Screen name="ZeroconfTest" component={ZeroconfTest} />
           </Stack.Navigator>
         </NavigationContainer>
       </SafeAreaView>

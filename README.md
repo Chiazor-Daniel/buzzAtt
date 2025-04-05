@@ -1,79 +1,85 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# Attendance System
 
-# Getting Started
+A hybrid attendance tracking system that works with both web and mobile clients, using Socket.io for real-time communication and Zeroconf for local network service discovery.
 
->**Note**: Make sure you have completed the [React Native - Environment Setup](https://reactnative.dev/docs/environment-setup) instructions till "Creating a new application" step, before proceeding.
+## Features
 
-## Step 1: Start the Metro Server
+- Create and manage attendance sessions
+- Real-time attendance marking
+- Local network service discovery
+- Web interface for testing
+- Mobile app support
+- Cross-platform compatibility
 
-First, you will need to start **Metro**, the JavaScript _bundler_ that ships _with_ React Native.
+## Setup
 
-To start Metro, run the following command from the _root_ of your React Native project:
-
+1. Install dependencies:
 ```bash
-# using npm
+npm install
+```
+
+2. Start the server:
+```bash
 npm start
-
-# OR using Yarn
-yarn start
 ```
 
-## Step 2: Start your Application
+The server will start on port 3000 by default.
 
-Let Metro Bundler run in its _own_ terminal. Open a _new_ terminal from the _root_ of your React Native project. Run the following command to start your _Android_ or _iOS_ app:
+## Usage
 
-### For Android
+### Web Interface
 
+1. Open `http://localhost:3000` in your browser
+2. Choose your role (Lecturer or Student)
+3. For Lecturers:
+   - Enter session name and optional message
+   - Click "Start Session" to create a new session
+4. For Students:
+   - Enter your Student ID and Name
+   - Click "Find Sessions" to discover available sessions
+   - Click "Join Session" to mark attendance
+
+### Mobile App
+
+The mobile app can discover and join sessions created by either the web interface or other mobile devices on the same network.
+
+#### Lecturer Mode:
+1. Enter session details
+2. Start session
+3. Monitor attendance in real-time
+
+#### Student Mode:
+1. Start discovery to find available sessions
+2. Select a session to join
+3. Mark attendance
+
+## Technical Details
+
+- Uses Socket.io for real-time communication
+- Zeroconf (mDNS/Bonjour) for service discovery
+- Express.js web server
+- React Native mobile app
+- WebSocket transport for reliable communication
+
+## Development
+
+For development with auto-reload:
 ```bash
-# using npm
-npm run android
-
-# OR using Yarn
-yarn android
+npm run dev
 ```
 
-### For iOS
+## API Endpoints
 
-```bash
-# using npm
-npm run ios
+- `POST /api/sessions` - Create a new session
+- `DELETE /api/sessions/:sessionId` - End a session
+- `GET /api/sessions/:sessionId` - Get session details
 
-# OR using Yarn
-yarn ios
-```
+## Socket.io Events
 
-If everything is set up _correctly_, you should see your new app running in your _Android Emulator_ or _iOS Simulator_ shortly provided you have set up your emulator/simulator correctly.
+- `mark_attendance` - Mark attendance in a session
+- `attendanceResponse` - Response to attendance marking
+- `studentMarkedAttendance` - Notification when a student marks attendance
 
-This is one way to run your app — you can also run it directly from within Android Studio and Xcode respectively.
+## License
 
-## Step 3: Modifying your App
-
-Now that you have successfully run the app, let's modify it.
-
-1. Open `App.tsx` in your text editor of choice and edit some lines.
-2. For **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Developer Menu** (<kbd>Ctrl</kbd> + <kbd>M</kbd> (on Window and Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (on macOS)) to see your changes!
-
-   For **iOS**: Hit <kbd>Cmd ⌘</kbd> + <kbd>R</kbd> in your iOS Simulator to reload the app and see your changes!
-
-## Congratulations! :tada:
-
-You've successfully run and modified your React Native App. :partying_face:
-
-### Now what?
-
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [Introduction to React Native](https://reactnative.dev/docs/getting-started).
-
-# Troubleshooting
-
-If you can't get this to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
-
-# Learn More
-
-To learn more about React Native, take a look at the following resources:
-
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+MIT

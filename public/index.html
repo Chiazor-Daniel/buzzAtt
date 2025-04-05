@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Attendance System</title>
+    <style>
+        .hidden {
+            display: none;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .panel {
+            border: 1px solid #ccc;
+            padding: 20px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .session-list {
+            margin: 20px 0;
+        }
+        .session-item {
+            border: 1px solid #eee;
+            padding: 10px;
+            margin: 5px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .session-item button {
+            margin-left: 10px;
+        }
+        .status-success {
+            color: green;
+        }
+        .status-error {
+            color: red;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Attendance System</h1>
+        
+        <!-- Role Selection -->
+        <div id="roleSelection">
+            <h2>Select Your Role</h2>
+            <button onclick="selectRole('lecturer')">I'm a Lecturer</button>
+            <button onclick="selectRole('student')">I'm a Student</button>
+        </div>
+
+        <!-- Lecturer Panel -->
+        <div id="lecturerPanel" class="panel" style="display: none;">
+            <h2>Lecturer Panel</h2>
+            <div>
+                <input type="text" id="courseName" placeholder="Enter Course Name">
+                <button onclick="createSession()">Create Session</button>
+            </div>
+            
+            <div id="activeSessionPanel" style="display: none;">
+                <h3>Active Session</h3>
+                <p>Session ID: <span id="sessionId"></span></p>
+                <p>Course: <span id="courseDisplay"></span></p>
+                <h4>Attendance List:</h4>
+                <ul id="attendanceList"></ul>
+                <button onclick="endSession()">End Session</button>
+            </div>
+        </div>
+
+        <!-- Student Panel -->
+        <div id="studentPanel" class="panel" style="display: none;">
+            <h2>Student Panel</h2>
+            <div>
+                <input type="text" id="studentId" placeholder="Enter Student ID">
+            </div>
+            
+            <div id="availableSessions" class="session-list">
+                <h3>Available Sessions</h3>
+                <div id="availableSessionsList"></div>
+            </div>
+            
+            <div id="activeSessionInfo" style="display: none;">
+                <h3>Current Session</h3>
+                <p>Course: <span id="currentSessionCourse"></span></p>
+                <p>Session ID: <span id="currentSessionId"></span></p>
+                <button onclick="markAttendance()">Mark Attendance</button>
+                <p id="attendanceStatus"></p>
+            </div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        let isLecturer = false;
+        let currentSessionId = null;
+
+        function selectRole(role) {
+            document.getElementById('roleSelection').style.display = 'none';
+            if (role === 'lecturer') {
+                document.getElementById('lecturerPanel').style.display = 'block';
+                isLecturer = true;
+            } else {
+                document.getElementById('studentPanel').style.display = 'block';
+                isLecturer = false;
+            }
+        }
+
+        function createSession() {
+            const courseName = document.getElementById('courseName').value;
+            if (!courseName) {
+                alert('Please enter a course name');
+                return;
+            }
+            socket.emit('createSession', { courseName });
+        }
+
+        function joinSession(sessionId, courseName) {
+            const studentId = document.getElementById('studentId').value;
+            
+            if (!studentId) {
+                alert('Please enter your Student ID');
+                return;
+            }
+
+            socket.emit('joinSession', { sessionId, studentId });
+            document.getElementById('currentSessionCourse').textContent = courseName;
+        }
+
+        function markAttendance() {
+            const sessionId = document.getElementById('currentSessionId').textContent;
+            const studentId = document.getElementById('studentId').value;
+
+            socket.emit('markAttendance', {
+                sessionId: sessionId,
+                studentId: studentId
+            });
+        }
+
+        function endSession() {
+            if (currentSessionId) {
+                socket.emit('endSession', currentSessionId);
+            }
+        }
+
+        function updateSessionsList(sessions) {
+            const listContainer = document.getElementById('availableSessionsList');
+            listContainer.innerHTML = '';
+
+            if (sessions.length === 0) {
+                listContainer.innerHTML = '<p>No active sessions available</p>';
+                return;
+            }
+
+            sessions.forEach(session => {
+                const sessionElement = document.createElement('div');
+                sessionElement.className = 'session-item';
+                sessionElement.innerHTML = `
+                    <div>
+                        <strong>Course:</strong> ${session.courseName}
+                        <br>
+                        <small>Session ID: ${session.id}</small>
+                    </div>
+                    <button onclick="joinSession('${session.id}', '${session.courseName}')">Join Session</button>
+                `;
+                listContainer.appendChild(sessionElement);
+            });
+        }
+
+        // Socket event listeners
+        socket.on('sessionListUpdate', (sessions) => {
+            if (!isLecturer) {
+                updateSessionsList(sessions);
+            }
+        });
+
+        socket.on('sessionCreated', (session) => {
+            currentSessionId = session.id;
+            document.getElementById('sessionId').textContent = session.id;
+            document.getElementById('courseDisplay').textContent = session.courseName;
+            document.getElementById('activeSessionPanel').style.display = 'block';
+        });
+
+        socket.on('joinedSession', (response) => {
+            if (response.success) {
+                document.getElementById('currentSessionId').textContent = response.session.id;
+                document.getElementById('activeSessionInfo').style.display = 'block';
+                document.getElementById('availableSessions').style.display = 'none';
+            } else {
+                alert(response.message);
+            }
+        });
+
+        socket.on('attendanceResponse', (response) => {
+            const statusElement = document.getElementById('attendanceStatus');
+            statusElement.textContent = response.message;
+            statusElement.className = response.success ? 'status-success' : 'status-error';
+        });
+
+        socket.on('studentMarkedAttendance', (data) => {
+            if (isLecturer) {
+                const attendanceList = document.getElementById('attendanceList');
+                const listItem = document.createElement('li');
+                listItem.textContent = `Student ${data.studentId} marked attendance`;
+                attendanceList.appendChild(listItem);
+            }
+        });
+
+        socket.on('sessionEnded', (sessionId) => {
+            if (currentSessionId === sessionId) {
+                if (isLecturer) {
+                    document.getElementById('activeSessionPanel').style.display = 'none';
+                } else {
+                    document.getElementById('activeSessionInfo').style.display = 'none';
+                    document.getElementById('availableSessions').style.display = 'block';
+                }
+                currentSessionId = null;
+            }
+        });
+    </script>
+</body>
+</html> 
