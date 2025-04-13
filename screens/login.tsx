@@ -11,7 +11,7 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import { loginUser } from '../apis';
+import { baseURL, loginUser } from '../apis';
 import { useAuthStore } from '../store/authStore';
 import { useUIStore } from '../store/uiStore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -59,7 +59,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
   
         // Test the token to get user profile
         const response = await fetch(
-          'https://api.attendance.finnetexh.tech/api/v1/auth/login/test-token',
+          `${baseURL}/auth/login/test-token`,
           {
             method: 'POST',
             headers: {
@@ -252,12 +252,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
           </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[styles.button, { backgroundColor: THEME.accent, marginTop: 20 }]}
-          onPress={() => navigation.navigate('ZeroconfTest')}
-        >
-          <Text style={styles.buttonText}>Go to Test Screen</Text>
-        </TouchableOpacity>
+       
       </ScrollView>
     </KeyboardAvoidingView>
   );

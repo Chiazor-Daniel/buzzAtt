@@ -19,7 +19,8 @@ import Toast from 'react-native-toast-message';
 import { Header } from '../components/utils';
 import { THEME, SPACING, FONTS, FONT_SIZES } from '../theme';
 
-export function StudentScreen({ navigation }: { navigation: any }) {
+export function StudentScreen({ navigation, route }: { navigation: any, route: any }) {
+  const { className } = route.params || {};
   const [matricNumber, setMatricNumber] = useState<string>('');
   const [isMarking, setIsMarking] = useState<boolean>(false);
   const [isSuccess, setIsSuccess] = useState<boolean>(false);
@@ -219,7 +220,7 @@ export function StudentScreen({ navigation }: { navigation: any }) {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={THEME.darker} />
-      <Header title="Student Attendance" />
+      <Header title={`Student Attendance - ${className || 'Class'}`} />
       
       <View style={styles.content}>
         {/* Success Animation - Green alert at bottom */}

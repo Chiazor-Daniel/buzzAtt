@@ -18,6 +18,7 @@ import LoginScreen from './screens/login';
 import RegisterScreen from './screens/register';
 import DashboardScreen from './screens/dasboard';
 import ZeroconfTest from './screens/ZeroconfTest';
+import CreateProfileScreen from './screens/createProfile';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -144,8 +145,24 @@ const App = () => {
           >
             <Stack.Screen name={SCREEN_NAMES.LOGIN} component={LoginScreen} />
             <Stack.Screen name={SCREEN_NAMES.REGISTER} component={RegisterScreen} />
+            <Stack.Screen name={SCREEN_NAMES.CREATE_PROFILE} component={CreateProfileScreen} />
             <Stack.Screen name={SCREEN_NAMES.MAIN_TABS} component={MainTabs} />
             <Stack.Screen name="ZeroconfTest" component={ZeroconfTest} />
+            <Stack.Screen 
+              name="StudentScreen" 
+              component={StudentScreen} 
+              options={{
+                headerShown: true,
+                headerStyle: {
+                  backgroundColor: THEME.dark,
+                },
+                headerTintColor: THEME.text,
+                headerTitleStyle: {
+                  fontWeight: '600',
+                },
+                title: 'Class Attendance'
+              }}
+            />
           </Stack.Navigator>
         </NavigationContainer>
       </SafeAreaView>

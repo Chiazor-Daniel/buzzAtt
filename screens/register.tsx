@@ -9,8 +9,12 @@ import {
   Platform,
   ScrollView,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { registerUser, loginUser } from '../apis';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { SCREEN_NAMES } from '../navigation/config';
 
 const THEME = {
   dark: '#1A1A1A',
@@ -27,18 +31,60 @@ const THEME = {
 const RegisterScreen = ({ navigation }) => {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
-  const [matricNumber, setMatricNumber] = useState('');
-  const [department, setDepartment] = useState('');
-  const [faculty, setFaculty] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleRegister = () => {
-    // Add your registration logic here
-    if (firstName && lastName && matricNumber && department && faculty && password) {
-      Alert.alert('Registration Successful', 'You can now log in.');
-      navigation.navigate('Login'); // Navigate to the Login screen
-    } else {
-      Alert.alert('Error', 'Please fill in all fields');
+  const handleRegister = async () => {
+    if (!email || !password) {
+      Alert.alert('Error', 'Email and password are required');
+      return;
+    }
+
+    if (password.length < 8) {
+      Alert.alert('Error', 'Password must be at least 8 characters long');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await registerUser({
+        email,
+        password,
+        first_name: firstName,
+        last_name: lastName,
+      });
+      
+      Alert.alert(
+        'Registration Successful',
+        'Your account has been created successfully. You can now login and create your profile.',
+        [
+          {
+            text: 'Login',
+            onPress: () => navigation.replace(SCREEN_NAMES.LOGIN)
+          }
+        ],
+        { cancelable: false }
+      );
+    } catch (error) {
+      console.error('Registration error:', error);
+      let errorMessage = 'Registration failed. Please try again.';
+        
+      if (error.response?.data) {
+        if (Array.isArray(error.response.data.detail)) {
+          errorMessage = error.response.data.detail.join('\n');
+        } else if (typeof error.response.data.detail === 'string') {
+          errorMessage = error.response.data.detail;
+        }
+      }
+
+      Alert.alert(
+        'Registration Failed',
+        errorMessage,
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -56,51 +102,49 @@ const RegisterScreen = ({ navigation }) => {
         <View style={styles.inputContainer}>
           <TextInput
             style={styles.input}
-            placeholder="First Name"
+            placeholder="Email"
+            placeholderTextColor={THEME.textSecondary}
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoComplete="email"
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="First Name (Optional)"
             placeholderTextColor={THEME.textSecondary}
             value={firstName}
             onChangeText={setFirstName}
           />
           <TextInput
             style={styles.input}
-            placeholder="Last Name"
+            placeholder="Last Name (Optional)"
             placeholderTextColor={THEME.textSecondary}
             value={lastName}
             onChangeText={setLastName}
           />
           <TextInput
             style={styles.input}
-            placeholder="Matric Number (e.g., FUO/20/CSI/1334)"
-            placeholderTextColor={THEME.textSecondary}
-            value={matricNumber}
-            onChangeText={setMatricNumber}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Department"
-            placeholderTextColor={THEME.textSecondary}
-            value={department}
-            onChangeText={setDepartment}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Faculty"
-            placeholderTextColor={THEME.textSecondary}
-            value={faculty}
-            onChangeText={setFaculty}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Password"
+            placeholder="Password (min. 8 characters)"
             placeholderTextColor={THEME.textSecondary}
             value={password}
             onChangeText={setPassword}
             secureTextEntry
+            autoCapitalize="none"
           />
         </View>
 
-        <TouchableOpacity style={styles.button} onPress={handleRegister}>
-          <Text style={styles.buttonText}>Register</Text>
+        <TouchableOpacity 
+          style={[styles.button, loading && styles.buttonDisabled]} 
+          onPress={handleRegister}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator color={THEME.text} />
+          ) : (
+            <Text style={styles.buttonText}>Register</Text>
+          )}
         </TouchableOpacity>
 
         <View style={styles.footer}>
@@ -115,6 +159,9 @@ const RegisterScreen = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
+  buttonDisabled: {
+    opacity: 0.7,
+  },
   container: {
     flex: 1,
     backgroundColor: THEME.darker,

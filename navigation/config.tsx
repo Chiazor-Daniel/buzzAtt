@@ -10,10 +10,20 @@ import { BottomTabNavigationOptions } from '@react-navigation/bottom-tabs';
 export const SCREEN_NAMES = {
   LOGIN: 'Login',
   REGISTER: 'Register',
+  CREATE_PROFILE: 'CreateProfile',
   MAIN_TABS: 'MainTabs',
   DASHBOARD: 'Dashboard',
   PROFILE: 'Profile',
+  ZEROCONF_TEST: 'ZeroconfTest'
 } as const;
+
+export type RootStackParamList = {
+  [SCREEN_NAMES.LOGIN]: { userType: UserType };
+  [SCREEN_NAMES.REGISTER]: { userType: UserType };
+  [SCREEN_NAMES.CREATE_PROFILE]: undefined;
+  [SCREEN_NAMES.MAIN_TABS]: undefined;
+  [SCREEN_NAMES.ZEROCONF_TEST]: undefined;
+};
 
 export const tabNavigatorConfig = {
   screenOptions: {

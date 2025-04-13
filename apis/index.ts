@@ -1,49 +1,62 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { currentConfig } from '../src/config/apiConfig';
 
 // Base URL for all API requests
-// export const baseURL = 'https://api.attendance.finnetexh.tech/api/v1';
-
-export const baseURL = "http://93.127.213.33:9085/api/v1"
+export const baseURL = currentConfig.baseURL;
 
 // Axios instance with base URL and default headers
 const api = axios.create({
   baseURL,
   headers: {
     'Content-Type': 'application/json',
+    'Accept': 'application/json'
   },
+  timeout: 30000, // 30 second timeout
+  withCredentials: true,
+  // Allow self-signed certificates and HTTPS issues
+  https: {
+    rejectUnauthorized: false
+  }
 });
 
-// Add request interceptor for authentication and debugging
-api.interceptors.request.use(async (config) => {
-  const token = await AsyncStorage.getItem('access_token');
-  if (token) {
-    console.log('Token found:', token);
-    config.headers.Authorization = `Bearer ${token}`;
-  } else {
-    console.log('No token found');
-  }
-
-  // Log the request method, URL, and data (if any)
-  console.log(`Making ${config.method.toUpperCase()} request to: ${config.url}`);
-  if (config.data) {
-    console.log('Request Data:', config.data);
-  }
-
-  return config;
-});
-
-// Add response interceptor for debugging
-api.interceptors.response.use(
-  (response) => {
-    // Log the response data
-    console.log(`Response from ${response.config.url}:`, response.data);
-    return response;
+// Add request interceptor for authentication
+api.interceptors.request.use(
+  async (config) => {
+    const token = await AsyncStorage.getItem('access_token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
   },
   (error) => {
-    // Log the error
-    console.error(`Error in ${error.config.method.toUpperCase()} request to ${error.config.url}:`, error.response?.data || error.message);
+    console.error('Request error:', error);
     return Promise.reject(error);
+  }
+);
+
+// Add response interceptor for error handling
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    // Handle network errors
+    if (!error.response) {
+      console.error('Network error:', error.message);
+      throw new Error('Network connection error. Please check your internet connection.');
+    }
+    
+    // Handle unauthorized access
+    if (error.response?.status === 401) {
+      AsyncStorage.removeItem('access_token');
+      throw new Error('Session expired. Please log in again.');
+    }
+    
+    // Handle other errors
+    if (error.response?.data?.detail) {
+      throw new Error(error.response.data.detail);
+    }
+    
+    throw error;
   }
 );
 
@@ -63,7 +76,25 @@ export const loginUser = async (credentials) => {
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
   });
 
-  console.log('Login Response:', response.data);
+  return response.data;
+};
+
+interface RegisterData {
+  email: string;
+  password: string;
+  first_name?: string;
+  last_name?: string;
+}
+
+export const registerUser = async (userData: RegisterData) => {
+  const response = await api.post('/auth/register/', {}, {
+    params: {
+      email: userData.email,
+      password: userData.password,
+      first_name: userData.first_name,
+      last_name: userData.last_name
+    }
+  });
   return response.data;
 };
 
@@ -79,8 +110,30 @@ export const healthCheck = async () => {
 };
 
 // Profile Endpoints
-export const createProfile = async (profileType, profileData) => {
-  const response = await api.post(`/student/profile/`, profileData);
+interface StudentProfile {
+  matric_number: string;
+  device_id: string;
+  faculty_id: string;
+  department_id: string;
+  phone_number?: string;
+  date_of_birth: string;
+}
+
+interface LecturerProfile {
+  staff_id: string;
+  faculty_id: string;
+  department_id: string;
+  phone_number?: string;
+  date_of_birth: string;
+}
+
+interface ProfileData {
+  student_profile?: StudentProfile;
+  lecturer_profile?: LecturerProfile;
+}
+
+export const createProfile = async (profileType: 'student' | 'lecturer', profileData: ProfileData) => {
+  const response = await api.post(`/${profileType}/profile/`, profileData);
   return response.data;
 };
 
@@ -95,7 +148,6 @@ export const getProfile = async (profileType) => {
   }
 
   const response = await api.get(endpoint);
-  console.log('Profile Response:', response.data);
   return response.data;
 };
 
@@ -106,17 +158,24 @@ export const getStudentClassroom = async () => {
 };
 
 export const enrollInClass = async (availableClassId) => {
-  const response = await api.post('/student/course/', { available_class_id: availableClassId });
+  const response = await api.post('/student/course/', null, {
+    params: { available_class_id: availableClassId }
+  });
   return response.data;
 };
 
 export const getAvailableClasses = async () => {
   const response = await api.get('/student/course/available-classes');
   return response.data;
-  console.log("available", response)
 };
 
-export const getStudentSchedule = async (classroomId) => {
+// Student Schedule Endpoints
+export const getStudentSchedule = async (classroomId: string) => {
+  const response = await api.get(`/student/course/schedule/${classroomId}`);
+  return response.data;
+};
+
+export const getStudentSchedules = async (classroomId: string) => {
   const response = await api.get(`/student/schedule/${classroomId}`);
   return response.data;
 };
@@ -179,30 +238,65 @@ export const scheduleClass = async (classData) => {
   return response.data;
 };
 
-
 export const createSchedule = async (scheduleData) => {
   const response = await api.post('/lecturer/schedule/', scheduleData);
   return response.data;
 };
 
-export const updateSchedule = async (scheduleId, scheduleData) => {
-  const response = await api.put(`/lecturer/schedule/${scheduleId}`, scheduleData);
+// Lecturer Attendance Management Endpoints
+export const removeAttendance = async (attendanceId: string) => {
+  const response = await api.delete(`/lecturer/attendance/${attendanceId}`);
   return response.data;
 };
 
-// Additional Endpoints
-export const getStudentCourses = async () => {
-  const response = await api.get('/api/v1/student/course/');
+export const updateAttendance = async (attendanceId: string, attendanceData: any) => {
+  const response = await api.put(`/lecturer/attendance/${attendanceId}`, attendanceData);
   return response.data;
 };
 
-export const enrollInCourse = async (availableClassId) => {
-  const response = await api.post(`/api/v1/student/course/?available_class_id=${availableClassId}`);
+
+// Student Course Management Endpoints
+export const enrollInCourse = async (classId: string) => {
+  const response = await api.post(`/student/course/`, {
+    available_class_id: classId
+  });
   return response.data;
 };
 
-export const getSchedules = async (classroomId) => {
-  const response = await api.get(`/api/v1/student/schedule/${classroomId}`);
+export const removeAvailableClass = async (availableClassId: string) => {
+  const response = await api.delete(`/student/course/available/${availableClassId}`);
+  return response.data;
+};
+
+export const getEligibleStudents = async (classroomId: string) => {
+  const response = await api.get(`/student/course/${classroom_id}/eligible-students`);
+  return response.data;
+};
+
+// Course Management Endpoints
+export const addAvailableClass = async (classroomId: string, studentId: string) => {
+  const response = await api.post(`/course/available/${classroom_id}/student/${student_id}`);
+  return response.data;
+};
+
+export const getAvailableClassesForStudent = async (studentId: string) => {
+  const response = await api.get(`/course/available/${studentId}`);
+  return response.data;
+};
+
+export const enrollInAvailableClass = async (availableClassId: string) => {
+  const response = await api.post(`/course/enroll/${availableClassId}`);
+  return response.data;
+};
+
+// Schedule Management Endpoints
+export const updateSchedule = async (scheduleId: string, scheduleData: any) => {
+  const response = await api.put(`/schedule/${scheduleId}`, scheduleData);
+  return response.data;
+};
+
+export const deleteSchedule = async (scheduleId: string) => {
+  const response = await api.delete(`/schedule/${scheduleId}`);
   return response.data;
 };
 

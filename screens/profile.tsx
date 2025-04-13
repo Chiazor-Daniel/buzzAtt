@@ -128,6 +128,19 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
         <Text style={styles.value}>
           {isStudent ? studentProfile?.dateOfBirth : lecturerProfile?.dateOfBirth || 'N/A'}
         </Text>
+
+        {/* Show create profile button if faculty_id or department_id is empty */}
+        {(!isStudent && (!lecturerProfile?.facultyId || !lecturerProfile?.departmentId)) || 
+         (isStudent && (!studentProfile?.facultyId || !studentProfile?.departmentId)) ? (
+          <TouchableOpacity 
+            style={styles.createProfileButton}
+            onPress={() => navigation.navigate(SCREEN_NAMES.CREATE_PROFILE)}
+          >
+            <Text style={styles.createProfileButtonText}>
+              Create Profile
+            </Text>
+          </TouchableOpacity>
+        ) : null}
       </View>
 
       <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
@@ -186,6 +199,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   logoutButtonText: {
+    color: THEME.text,
+    fontSize: FONT_SIZES.md,
+    fontWeight: '600',
+    fontFamily: FONTS.medium,
+  },
+  createProfileButton: {
+    backgroundColor: THEME.accent,
+    padding: SPACING.md,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: SPACING.md,
+  },
+  createProfileButtonText: {
     color: THEME.text,
     fontSize: FONT_SIZES.md,
     fontWeight: '600',
