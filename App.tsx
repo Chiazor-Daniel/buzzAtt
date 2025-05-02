@@ -19,7 +19,6 @@ import RegisterScreen from './screens/register';
 import DashboardScreen from './screens/dasboard';
 import ZeroconfTest from './screens/ZeroconfTest';
 import CreateProfileScreen from './screens/createProfile';
-
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
@@ -61,7 +60,7 @@ function MainTabs() {
         ))}
       </Tab.Navigator>
 
-      <TouchableOpacity
+      {/* <TouchableOpacity
         style={styles.floatingButtonTopRight}
         onPress={toggleMode}
       >
@@ -69,7 +68,7 @@ function MainTabs() {
           name={isStudent ? 'account-school' : 'teach'}
           color={THEME.text}
         />
-      </TouchableOpacity>
+      </TouchableOpacity> */}
 
       {!isOffline && (
         <TouchableOpacity
@@ -116,7 +115,7 @@ const App = () => {
         console.error('Error initializing app:', error);
       } finally {
         setIsLoading(false);
-      }
+      } 
     };
 
     initialize();

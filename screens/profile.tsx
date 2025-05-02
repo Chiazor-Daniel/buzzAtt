@@ -77,10 +77,9 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
       }
     >
       <View style={styles.profilePictureContainer}>
-        <Image
-          source={{ uri: 'https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Ftse3.mm.bing.net%2Fth%3Fid%3DOIP.7SUq3c2AW6pyW2V_yCyBgwHaHa%26pid%3DApi&f=1&ipt=13d080a3ffc033fd6d0e7a447e13b710cac47b76114cac02032a971540d20bd3&ipo=images' }}
-          style={styles.profilePicture}
-        />
+        <View style={styles.avatarContainer}>
+          <Text style={styles.avatarText}>{user?.name?.[0]?.toUpperCase() || 'U'}</Text>
+        </View>
       </View>
 
       <View style={styles.infoContainer}>
@@ -130,7 +129,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
         </Text>
 
         {/* Show create profile button if faculty_id or department_id is empty */}
-        {(!isStudent && (!lecturerProfile?.facultyId || !lecturerProfile?.departmentId)) || 
+        {/* {(!isStudent && (!lecturerProfile?.facultyId || !lecturerProfile?.departmentId)) || 
          (isStudent && (!studentProfile?.facultyId || !studentProfile?.departmentId)) ? (
           <TouchableOpacity 
             style={styles.createProfileButton}
@@ -140,7 +139,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
               Create Profile
             </Text>
           </TouchableOpacity>
-        ) : null}
+        ) : null} */}
       </View>
 
       <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
@@ -151,6 +150,19 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
+  avatarContainer: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: THEME.accent,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarText: {
+    fontSize: 32,
+    color: THEME.background,
+    fontWeight: 'bold',
+  },
   container: {
     flexGrow: 1,
     backgroundColor: THEME.darker,

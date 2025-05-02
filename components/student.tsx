@@ -96,6 +96,8 @@ const StudentDashboard = ({ navigation }) => {
 
   useEffect(() => {
     fetchStudentData();
+    console.log(enrolledClasses)
+    console.log(availableClasses)
   }, []);
 
   const fetchClassSchedule = async (classId) => {
@@ -273,28 +275,18 @@ const StudentDashboard = ({ navigation }) => {
           <View style={styles.classInfo}>
             <Text style={styles.classTitle}>{item.name || item.description || 'Untitled Class'}</Text>
             <Text style={styles.classSubtitle}>
-              Department {item.department_id ? item.department_id.slice(0, 4) : 'TBA'}
+             {item?.description}
             </Text>
           </View>
         </View>
         
         {isEnrolled ? (
           <View style={styles.classActions}>
-            {item.schedule && item.schedule.length > 0 ? (
-              <View style={styles.scheduleButton}>
-                <Icon name="calendar" size={16} color={THEME.accent} />
-                <Text style={styles.scheduleButtonText}>
-                  {item.schedule.length} Session{item.schedule.length > 1 ? 's' : ''}
-                </Text>
-              </View>
-            ) : (
-              <Text style={[styles.scheduleButtonText, { color: THEME.textSecondary }]}>No Schedule</Text>
-            )}
             <TouchableOpacity 
               style={styles.enrollButton}
               onPress={() => handleTakeAttendance(item)}
             >
-              <Icon name="pencil" size={16} color={THEME.text} />
+              
               <Text style={styles.enrollButtonText}>Take Attendance</Text>
             </TouchableOpacity>
           </View>
@@ -340,7 +332,7 @@ const StudentDashboard = ({ navigation }) => {
             />
           </View>
           <View style={styles.classInfo}>
-            <Text style={styles.classTitle}>{item.classroom_id}</Text>
+            <Text style={styles.classTitle}>{item?.classroom_id.slice(0,10)}</Text>
           </View>
         </View>
         
@@ -700,6 +692,7 @@ const styles = {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 12,
+    justifyContent: 'center',
     borderRadius: 8,
     backgroundColor: THEME.accent,
   },
@@ -712,6 +705,7 @@ const styles = {
   enrollButtonText: {
     color: THEME.text,
     marginRight: 8,
+    marginLeft: 8,
     fontWeight: '600',
   },
   loaderContainer: {
@@ -871,18 +865,6 @@ const styles = {
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
-  },
-  emptyTitle: {
-    color: THEME.textSecondary,
-    fontSize: 18,
-    fontWeight: '600',
-    marginTop: 16,
-  },
-  emptyText: {
-    color: THEME.textSecondary,
-    fontSize: 14,
-    marginTop: 8,
-    textAlign: 'center',
   },
 };
 

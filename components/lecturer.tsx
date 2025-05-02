@@ -7,7 +7,7 @@ import { THEME, SPACING, FONTS, FONT_SIZES } from '../theme';
 import { StatusBadge } from './utils';
 
 const LecturerDashboard = ({ navigation }) => {
-  const { lecturerProfile } = useAuthStore();
+  const { lecturerProfile, studentProfile, user } = useAuthStore();
   const [lecturerCourses, setLecturerCourses] = useState([]);
   const [attendanceData, setAttendanceData] = useState([]);
   const [schedules, setSchedules] = useState([]);
@@ -16,25 +16,20 @@ const LecturerDashboard = ({ navigation }) => {
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [isScheduleModalVisible, setIsScheduleModalVisible] = useState(false);
   const [scheduleData, setScheduleData] = useState({ course_id: '', schedule: [] });
-  const isMounted = useRef(true);
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
-  useEffect(() => {
-    return () => {
-      isMounted.current = false;
-    };
-  }, []);
-
   const fetchLecturerData = async () => {
-    if (!isMounted.current) return;
+    console.log('User:', user);
     setLoading(true);
     try {
-      const lecturerId = lecturerProfile?.id;
+      const lecturerId = user?.id;
+      console.log('Lecturer ID:', lecturerId);
       if (lecturerId) {
         const coursesData = await getCourses(lecturerId);
+        console.log('Courses data:', coursesData);
         const schedulesData = await getLecturerSchedules(lecturerId);
+        console.log('Schedules data:', schedulesData);
         
-        if (isMounted.current) {
           const validCoursesData = Array.isArray(coursesData) ? coursesData : [];
           setLecturerCourses(validCoursesData);
           setSchedules(schedulesData || []);
@@ -43,43 +38,34 @@ const LecturerDashboard = ({ navigation }) => {
           if (validCoursesData.length > 0) {
             setSelectedCourse(validCoursesData[0]);
           }
-        }
       }
     } catch (error) {
       console.error('Error fetching lecturer data:', error);
-      if (isMounted.current) {
-        Alert.alert('Error', 'Failed to load courses. Please try again later.');
-      }
+      Alert.alert('Error', 'Failed to load courses. Please try again later.');
     } finally {
-      if (isMounted.current) {
-        setLoading(false);
-      }
+      setLoading(false);
     }
   };
 
-  const fetchAttendance = async (courseId) => {
-    if (!courseId || !isMounted.current) return;
+  const fetchAttendance = async (courseId: string) => {
+    if (!courseId) return;
     
     setLoadingAttendance(true);
     try {
       const attendanceData = await getAttendance(courseId);
       
-      if (isMounted.current) {
-        setAttendanceData(Array.isArray(attendanceData) ? attendanceData : []);
-      }
+      setAttendanceData(Array.isArray(attendanceData) ? attendanceData : []);
     } catch (error) {
       console.error('Error fetching attendance:', error);
-      if (isMounted.current) {
         Alert.alert('Error', 'Failed to load attendance data.');
-      }
     } finally {
-      if (isMounted.current) {
-        setLoadingAttendance(false);
-      }
+      setLoadingAttendance(false);
     }
   };
 
   useEffect(() => {
+    console.log('Student profile:', studentProfile);
+    console.log('User:', user);
     fetchLecturerData();
   }, []);
 

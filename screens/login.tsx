@@ -51,6 +51,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
     try {
       // First login to get the token
       const loginResponse = await loginUser({ username: email, password });
+      console.log(loginResponse)
   
       if (loginResponse?.access_token) {
         const token = loginResponse.access_token;
@@ -62,12 +63,14 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
           `${baseURL}/auth/login/test-token`,
           {
             method: 'POST',
-            headers: {
+            headers: { 
               'accept': 'application/json',
               'Authorization': `Bearer ${token}`
             }
           }
         );
+
+        console.log("response-token", response)
   
         if (!response.ok) {
           throw new Error('Failed to get user profile');
@@ -136,10 +139,13 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
           setMacAddress(macAddress);
           await AsyncStorage.setItem('macAddress', macAddress);
   
-          // Reset navigation stack to MainTabs
+          // Reset navigation stack to MainTabs with fromLogin parameter
           navigation.reset({
             index: 0,
-            routes: [{ name: SCREEN_NAMES.MAIN_TABS }],
+            routes: [{ 
+              name: SCREEN_NAMES.MAIN_TABS,
+              params: { fromLogin: true }
+            }],
           });
         }
       }

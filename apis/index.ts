@@ -181,64 +181,64 @@ export const getStudentSchedules = async (classroomId: string) => {
 };
 
 // Lecturer Course Endpoints
-export const getStudents = async (classroomId) => {
+export const getStudents = async (classroomId: string) => {
   const response = await api.get('/lecturer/course/students', { params: { classroom_id: classroomId } });
   return response.data;
 };
 
-export const getLecturers = async (classroomId) => {
+export const getLecturers = async (classroomId: string) => {
   const response = await api.get('/lecturer/course/lecturers', { params: { classroom_id: classroomId } });
   return response.data;
 };
 
-export const getCourses = async (lecturerId) => {
+export const getCourses = async (lecturerId: string) => {
   const response = await api.get('/lecturer/course/courses', { params: { lecturer_id: lecturerId } });
   return response.data;
 };
 
 // Lecturer Attendance Endpoints
-export const markAttendance = async (attendanceData) => {
+export const markAttendance = async (attendanceData: any) => {
   const response = await api.post('/lecturer/attendance/', attendanceData);
   return response.data;
 };
 
-export const getAttendance = async (classroomId) => {
+export const getAttendance = async (classroomId: string) => {
   const response = await api.get('/lecturer/attendance/', { params: { classroom_id: classroomId } });
   return response.data;
 };
 
-export const markBulkAttendance = async (attendanceData) => {
+export const markBulkAttendance = async (attendanceData: any) => {
   const response = await api.post('/lecturer/attendance/bulk', attendanceData);
   return response.data;
 };
 
-export const getAttendanceByStudent = async (studentId) => {
+export const getAttendanceByStudent = async (studentId: string) => {
   const response = await api.get('/lecturer/attendance/student', { params: { student_id: studentId } });
   return response.data;
 };
 
 // Lecturer Schedule Endpoints
-export const createClassSchedule = async (scheduleData) => {
+export const createClassSchedule = async (scheduleData : any) => {
   const response = await api.post('/lecturer/schedule/', scheduleData);
   return response.data;
 };
 
-export const getLecturerSchedule = async (classroomId) => {
+export const getLecturerSchedule = async (classroomId: string) => {
   const response = await api.get(`/lecturer/schedule/${classroomId}`);
   return response.data;
 };
 
-export const getLecturerSchedules = async (lecturerId) => {
+export const getLecturerSchedules = async (lecturerId: string) => {
   const response = await api.get(`/lecturer/schedule/${lecturerId}`);
   return response.data;
 };
 
-export const scheduleClass = async (classData) => {
+export const scheduleClass = async (classData: any) => {
   const response = await api.post('/lecturer/schedule/', classData);
   return response.data;
 };
 
-export const createSchedule = async (scheduleData) => {
+export const createSchedule = async (scheduleData: any) => {
   const response = await api.post('/lecturer/schedule/', scheduleData);
   return response.data;
 };
@@ -256,7 +256,7 @@ export const updateAttendance = async (attendanceId: string, attendanceData: any
 
 
 // Student Course Management Endpoints
-export const enrollInCourse = async (classId: string) => {
+export const enrollInCourse = async (classId: string ) => {
   const response = await api.post(`/student/course/`, {
     available_class_id: classId
   });
