@@ -230,7 +230,7 @@ export function StudentScreen({ navigation, route }: { navigation: any, route: a
         >
           <View style={styles.successContent}>
             <Icon name="check-circle-outline" size={24} color="#fff" />
-            <Text style={styles.successText}>Attendance Marked!</Text>
+            <Text style={styles.successText}>Attendance Sent!</Text>
           </View>
         </Animated.View>
 

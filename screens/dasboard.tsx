@@ -6,7 +6,7 @@ import LecturerDashboard from '../components/lecturer';
 import { BlurView } from '@react-native-community/blur';
 import { THEME, SPACING, FONTS, FONT_SIZES } from '../theme';
 
-const DashboardScreen = ({ navigation, route }) => {
+const DashboardScreen = ({ navigation, route }: any) => {
   const { isStudent, setIsStudent } = useUIStore();
   const [showModal, setShowModal] = useState(route?.params?.fromLogin || !isStudent);
 
@@ -57,7 +57,7 @@ const styles = StyleSheet.create({
   },
   blurContainer: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    backgroundColor: 'rgba(0, 0, 0, 0.9)',
   },
   modalContainer: {
     flex: 1,
@@ -66,7 +66,7 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     width: '80%',
-    backgroundColor: THEME.dark,
+    backgroundColor: THEME.darker,
     borderRadius: 10,
     padding: SPACING.lg,
     elevation: 5,
@@ -95,7 +95,7 @@ const styles = StyleSheet.create({
     backgroundColor: THEME.accent,
   },
   buttonText: {
-    color: THEME.white,
+    color: THEME.text,
     fontSize: FONT_SIZES.lg,
     fontFamily: FONTS.medium,
   },

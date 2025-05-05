@@ -245,9 +245,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
           )}
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.quickUseButton} onPress={handleQuickUse} disabled={isLoading}>
-          <Text style={styles.quickUseButtonText}>Quick Use</Text>
-        </TouchableOpacity>
+      
 
         <TouchableOpacity
           style={styles.registerButton}
@@ -267,7 +265,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: THEME.dark,
+    backgroundColor: THEME.darker,
   },
   scrollContainer: {
     flexGrow: 1,

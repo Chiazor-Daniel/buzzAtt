@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, FlatList, ActivityIndicator, Alert, Modal
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useAuthStore } from '../store';
 import { getAvailableClasses, getStudentClassroom, enrollInClass, getStudentSchedule } from '../apis';
+import { FONTS } from '../theme';
 
 const THEME = {
   dark: '#1A1A1A',
@@ -537,7 +538,7 @@ const StudentDashboard = ({ navigation }) => {
           <Icon 
             name="book-open-page-variant" 
             size={18} 
-            color={activeTab === 'enrolled' ? THEME.accent : THEME.textSecondary} 
+            color={activeTab === 'enrolled' ? THEME.text : THEME.textSecondary} 
           />
           <Text 
             style={[styles.tabText, activeTab === 'enrolled' && styles.activeTabText]}
@@ -552,7 +553,7 @@ const StudentDashboard = ({ navigation }) => {
           <Icon 
             name="book-plus" 
             size={18} 
-            color={activeTab === 'available' ? THEME.accent : THEME.textSecondary} 
+            color={activeTab === 'available' ? THEME.text : THEME.textSecondary} 
           />
           <Text 
             style={[styles.tabText, activeTab === 'available' && styles.activeTabText]}
@@ -589,38 +590,34 @@ const styles = {
     padding: 16,
   },
   tabContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    backgroundColor: THEME.card,
-    borderRadius: 12,
-    padding: 6,
-    marginBottom: 20,
-    elevation: 3,
-  },
-  tab: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 8,
-    flex: 1,
-  },
-  activeTab: {
-    backgroundColor: 'rgba(124, 77, 255, 0.2)',
-    borderBottomWidth: 3,
-    borderBottomColor: THEME.accent,
-  },
-  tabText: {
-    color: THEME.textSecondary,
-    marginLeft: 8,
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  activeTabText: {
-    color: THEME.text,
-    fontWeight: '700',
-  },
+     flexDirection: 'row',
+     justifyContent: 'space-around',
+     backgroundColor: THEME.card,
+     borderRadius: 12,
+     padding: 8,
+     paddingVertical: 10,
+     marginBottom: 20,
+     elevation: 3,
+   },
+   tab: {
+     flexDirection: 'row',
+     alignItems: 'center',
+     paddingHorizontal: 16,
+     paddingVertical: 12,
+     borderRadius: 10,
+   },
+   activeTab: {
+     backgroundColor: THEME.accent,
+   },
+   tabText: {
+     fontSize: 14,
+     marginLeft: 8,
+     color: THEME.textSecondary,
+     fontFamily: FONTS.regular,
+   },
+   activeTabText: {
+     color: THEME.text,
+   },
   classCard: {
     flexDirection: 'row',
     justifyContent: 'space-between',
