@@ -162,6 +162,21 @@ const App = () => {
                 title: 'Class Attendance'
               }}
             />
+            <Stack.Screen 
+              name="LecturerScreen" 
+              component={LecturerScreen} 
+              options={{
+                headerShown: true,
+                headerStyle: {
+                  backgroundColor: THEME.dark,
+                },
+                headerTintColor: THEME.text,
+                headerTitleStyle: {
+                  fontWeight: '600',
+                },
+                title: 'Class Attendance'
+              }}
+            />
           </Stack.Navigator>
         </NavigationContainer>
       </SafeAreaView>

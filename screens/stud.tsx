@@ -30,10 +30,32 @@ export function StudentScreen({ navigation, route }: { navigation: any, route: a
   const [biometricAvailable, setBiometricAvailable] = useState<boolean>(false);
   const [biometricType, setBiometricType] = useState<string>('Biometric');
   const [lastMarkedTime, setLastMarkedTime] = useState<string>('');
+  const [lecturerIP, setLecturerIP] = useState<string | null>(null);
   
   const fadeAnim = useState(new Animated.Value(0))[0];
   const scaleAnim = useState(new Animated.Value(1))[0];
   
+
+  // Add this useEffect:
+useEffect(() => {
+  const discoverySocket = new UdpSocket.Socket({ type: 'udp4' });
+  
+  discoverySocket.bind(3001, '0.0.0.0', () => {
+    discoverySocket.on('message', (msg, rinfo) => {
+      try {
+        const data = JSON.parse(msg.toString());
+        if (data.type === 'lecturer_here') {
+          setLecturerIP(rinfo.address); // Save lecturer's IP
+        }
+      } catch (e) {
+        console.log("Discovery error:", e);
+      }
+    });
+  });
+
+  return () => discoverySocket.close();
+}, []);
+
   // Check if biometrics are available
   useEffect(() => {
     const checkBiometrics = async () => {
@@ -148,68 +170,81 @@ export function StudentScreen({ navigation, route }: { navigation: any, route: a
       });
       return;
     }
-
+  
     setIsMarking(true);
     const socket = new UdpSocket.Socket({ type: 'udp4' });
     
-    // Bind to any available port
     socket.bind(0, '0.0.0.0', () => {
-      console.log('Socket bound to random port');
-      
       const attendanceData = JSON.stringify({
         type: 'mark_attendance',
         matricNumber: matricNumber.trim(),
         timestamp: Date.now()
       });
-
-      console.log('Sending attendance data:', attendanceData);
-
-      // Try multiple broadcast addresses to ensure it reaches the lecturer device
-      const broadcastAddresses = ['255.255.255.255', '192.168.0.255', '192.168.1.255', '10.0.2.2', '10.0.2.15'];
-      
-      // Function to send to each address
-      const sendToAddress = (index: number) => {
-        if (index >= broadcastAddresses.length) {
-          console.log('Tried all broadcast addresses');
-          return;
-        }
-        
-        const address = broadcastAddresses[index];
-        console.log(`Trying to send to ${address}`);
-        
-        socket.send(attendanceData, 0, attendanceData.length, 3000, address, (err) => {
-        if (err) {
-          console.error('Error sending attendance:', err);
-          Toast.show({
-            type: 'error',
-            text1: 'Error',
-            text2: 'Failed to mark attendance'
-          });
-        } else {
-          console.log('Attendance data sent successfully');
-          setIsSuccess(true);
-          const currentTime = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-          setLastMarkedTime(currentTime);
-          Toast.show({
-            type: 'success',
-            text1: 'Success',
-            text2: 'Attendance marked'
-          });
-        }
-          // Try next address if there was an error
+  
+      // 1. FIRST TRY: If we have lecturer's IP, use direct send
+      if (lecturerIP) {
+        console.log('Direct send to lecturer IP:', lecturerIP);
+        socket.send(attendanceData, 0, attendanceData.length, 3000, lecturerIP, (err) => {
           if (err) {
-            console.error(`Error sending to ${address}:`, err);
-            sendToAddress(index + 1);
+            console.log('Direct send failed, falling back to broadcast');
+            sendBroadcast(); // Fallback to broadcast
           } else {
-            console.log(`Attendance data sent successfully to ${address}`);
-            setIsMarking(false);
-            socket.close();
+            handleSuccess();
           }
         });
-      };
-      
-      // Start sending to the first address
-      sendToAddress(0);
+      } 
+      // 2. FALLBACK: Original broadcast behavior
+      else {
+        sendBroadcast();
+      }
+  
+      function sendBroadcast() {
+        const addresses = ['255.255.255.255', '192.168.0.255', '192.168.1.255'];
+        let attempts = 0;
+  
+        const trySend = () => {
+          if (attempts >= addresses.length) {
+            handleFailure();
+            return;
+          }
+  
+          const address = addresses[attempts];
+          attempts++;
+  
+          socket.send(attendanceData, 0, attendanceData.length, 3000, address, (err) => {
+            if (err) {
+              console.error(`Error sending to ${address}:`, err);
+              trySend(); // Try next address
+            } else {
+              handleSuccess();
+            }
+          });
+        };
+  
+        trySend();
+      }
+  
+      function handleSuccess() {
+        setIsMarking(false);
+        setIsSuccess(true);
+        setLastMarkedTime(new Date().toLocaleTimeString());
+        Toast.show({
+          type: 'success',
+          text1: 'Success',
+          text2: 'Attendance marked'
+        });
+        socket.close();
+      }
+  
+      function handleFailure() {
+        setIsMarking(false);
+        Toast.show({
+          type: 'error',
+          text1: 'Error',
+          text2: 'Failed to mark attendance'
+        });
+        socket.close();
+      }
     });
   };
   

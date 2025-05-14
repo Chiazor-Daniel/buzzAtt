@@ -25,10 +25,12 @@ type Student = {
   timestamp: number;
 };
 
-export function LecturerScreen({ navigation }: { navigation: any }) {
+export function LecturerScreen({ navigation, route }: { navigation: any, route: any }) {
   const [isSessionActive, setIsSessionActive] = useState<boolean>(false);
   const [students, setStudents] = useState<Student[]>([]);
   const [socket, setSocket] = useState<any>(null);
+  const courseId = route.params?.courseId;
+  const courseTitle = route.params?.courseTitle;
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [sessionStartTime, setSessionStartTime] = useState<number>(Date.now());
   const [isExporting, setIsExporting] = useState<boolean>(false);
@@ -72,14 +74,17 @@ export function LecturerScreen({ navigation }: { navigation: any }) {
       // Close any existing socket first
       if (socket) {
         try {
-          socket.removeAllListeners('message');
+          socket.removeAllListeners();
           socket.close();
         } catch (error) {
           console.error('Error closing existing socket:', error);
         }
       }
       
-      const newSocket = new UdpSocket.Socket({ type: 'udp4' });
+      const newSocket = new UdpSocket.Socket({ 
+        type: 'udp4',
+        reuseAddr: true // IMPORTANT: Allows quick port reuse
+      });
       
       // Handle errors
       newSocket.on('error', (err) => {
@@ -91,12 +96,24 @@ export function LecturerScreen({ navigation }: { navigation: any }) {
         });
       });
       
-      // Bind to port 3000
+      // Bind to port 3000 (main attendance port)
       newSocket.bind(3000, '0.0.0.0', () => {
         console.log('Socket bound to port 3000');
         setIsSessionActive(true);
         setSessionStartTime(Date.now());
         setIsLoading(false);
+        
+        // ADDED: Start broadcasting presence every 3 seconds
+        const presenceInterval = setInterval(() => {
+          const presenceMsg = JSON.stringify({
+            type: 'lecturer_presence',
+            timestamp: Date.now()
+          });
+          newSocket.send(presenceMsg, 0, presenceMsg.length, 3001, '255.255.255.255');
+        }, 3000);
+        
+        // Cleanup interval when socket closes
+        newSocket.on('close', () => clearInterval(presenceInterval));
         
         Toast.show({
           type: 'success',
@@ -104,22 +121,20 @@ export function LecturerScreen({ navigation }: { navigation: any }) {
           text2: 'Attendance session started'
         });
       });
-
-      // Listen for broadcasts
+  
+      // Listen for attendance marks (UNCHANGED)
       newSocket.on('message', (msg, rinfo) => {
         try {
           const data = JSON.parse(msg.toString());
           console.log('Received message:', data);
           if (data.type === 'mark_attendance') {
             setStudents(prev => {
-              // Check if student already marked attendance
               const exists = prev.some(s => s.matricNumber === data.matricNumber);
               if (!exists) {
-                // Add new student
                 return [...prev, {
                   matricNumber: data.matricNumber,
                   ip: rinfo.address,
-                  timestamp: data.timestamp
+                  timestamp: Date.now() // Changed to use server timestamp
                 }];
               }
               return prev;
@@ -129,7 +144,7 @@ export function LecturerScreen({ navigation }: { navigation: any }) {
           console.error('Error processing message:', error);
         }
       });
-
+  
       setSocket(newSocket);
     } catch (error) {
       console.error('Error setting up socket:', error);
@@ -330,7 +345,7 @@ export function LecturerScreen({ navigation }: { navigation: any }) {
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={THEME.darker} />      
       <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
-        <Text style={styles.screenTitle}>Lecturer Attendance</Text>
+        <Text style={styles.screenTitle}>Lecturer Attendance -  {courseTitle}</Text>
         
         {!isSessionActive ? (
           <TouchableOpacity 

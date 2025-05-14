@@ -5,72 +5,270 @@ import { useAuthStore } from '../store';
 import { getCourses, getAttendance, getStudents, getLecturerSchedules, createSchedule, updateSchedule } from '../apis';
 import { THEME, SPACING, FONTS, FONT_SIZES } from '../theme';
 import { StatusBadge } from './utils';
+import { useAttendanceStore } from '../store/attendanceStore';
+
+
 
 const LecturerDashboard = ({ navigation }) => {
   const { lecturerProfile, studentProfile, user } = useAuthStore();
   const [activeTab, setActiveTab] = useState('courses');
   const [lecturerCourses, setLecturerCourses] = useState([]);
-  const [students, setStudents] = useState([]);
+  const [students, setStudents] = useState([
+    {
+      id: '3',
+      name: 'Alice Johnson',
+      attendance_count: 18,
+      absence_count: 0,
+    },
+    {
+      id: '4',
+      name: 'Bob Brown',
+      attendance_count: 14,
+      absence_count: 3,
+    },
+    {
+      id: '5',
+      name: 'Emily Davis',
+      attendance_count: 16,
+      absence_count: 1,
+    },
+    {
+      id: '6',
+      name: 'Michael Wilson',
+      attendance_count: 13,
+      absence_count: 2,
+    },
+    {
+      id: '7',
+      name: 'Sarah Taylor',
+      attendance_count: 17,
+      absence_count: 0,
+    },
+    {
+      id: '8',
+      name: 'David Anderson',
+      attendance_count: 15,
+      absence_count: 1,
+    },
+    {
+      id: '9',
+      name: 'Olivia Moore',
+      attendance_count: 14,
+      absence_count: 2,
+    },
+    {
+      id: '10',
+      name: 'William Jackson',
+      attendance_count: 16,
+      absence_count: 0,
+    },
+  ]);
   const [attendanceData, setAttendanceData] = useState([]);
   const [schedules, setSchedules] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadingAttendance, setLoadingAttendance] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [isScheduleModalVisible, setIsScheduleModalVisible] = useState(false);
-  const [scheduleData, setScheduleData] = useState({ course_id: '', schedule: [] });
+  const [scheduleData, setScheduleData] = useState({
+    id: '',
+    course_id: '',
+    schedule: [{ day: '', start_time: '', end_time: '' }]
+  });
+  const [isCourseModalVisible, setIsCourseModalVisible] = useState(false);
+  const [cachedAttendances, setCachedAttendances] = useState([]);
+  const [selectedAttendance, setSelectedAttendance] = useState(null);
   const scaleAnim = useRef(new Animated.Value(1)).current;
+  const [syncState, setSyncState] = useState({
+    isSyncing: false,
+    progress: 0,
+    currentSyncingItem: null,
+    lastSynced: null
+  });
   
   // New state for sync functionality
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncComplete, setSyncComplete] = useState(false);
   const rotationAnim = useRef(new Animated.Value(0)).current;
 
+  // const fetchLecturerData = async () => {
+  //   console.log('User:', user);
+  //   setLoading(true);
+  //   try {
+  //     const lecturerId = user?.id;
+  //     console.log('Lecturer ID:', lecturerId);
+  //     if (lecturerId) {
+  //       const coursesData = await getCourses(lecturerId);
+  //       console.log('Courses data:', coursesData);
+  //       const schedulesData = await getLecturerSchedules(lecturerId);
+  //       console.log('Schedules data:', schedulesData);
+
+  //       const validCoursesData = Array.isArray(coursesData) ? coursesData : [];
+  //       setLecturerCourses(validCoursesData);
+  //       setSchedules(schedulesData || []);
+
+  //       if (validCoursesData.length > 0) {
+  //         setSelectedCourse(validCoursesData[0]);
+  //       }
+  //     }
+  //   } catch (error) {
+  //     console.error('Error fetching lecturer data:', error);
+  //     Alert.alert('Error', 'Failed to load courses. Please try again later.');
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
+
+  // const fetchAttendance = async (courseId) => {
+  //   if (!courseId) return;
+
+  //   setLoadingAttendance(true);
+  //   try {
+  //     const attendanceData = await getAttendance(courseId);
+  //     setAttendanceData(Array.isArray(attendanceData) ? attendanceData : []);
+  //   } catch (error) {
+  //     console.error('Error fetching attendance:', error);
+  //     Alert.alert('Error', 'Failed to load attendance data.');
+  //   } finally {
+  //     setLoadingAttendance(false);
+  //   }
+  // };
+
+
   const fetchLecturerData = async () => {
-    console.log('User:', user);
+    console.log('Loading mock data...');
     setLoading(true);
     try {
-      const lecturerId = user?.id;
-      console.log('Lecturer ID:', lecturerId);
-      if (lecturerId) {
-        const coursesData = await getCourses(lecturerId);
-        console.log('Courses data:', coursesData);
-        const schedulesData = await getLecturerSchedules(lecturerId);
-        console.log('Schedules data:', schedulesData);
-
-        const validCoursesData = Array.isArray(coursesData) ? coursesData : [];
-        setLecturerCourses(validCoursesData);
-        setSchedules(schedulesData || []);
-
-        if (validCoursesData.length > 0) {
-          setSelectedCourse(validCoursesData[0]);
+      // Mock courses data
+      const mockCourses = [
+        {
+          id: 'course1',
+          classroom_id: 'class1',
+          title: 'Introduction to Computer Science',
+          description: 'Fundamentals of programming and algorithms',
+          student_count: 5,
+          code: 'CS101'
+        },
+        {
+          id: 'course2',
+          classroom_id: 'class2',
+          title: 'Data Structures',
+          description: 'Advanced programming concepts',
+          student_count: 5,
+          code: 'CS201'
+        },
+        {
+          id: 'course3',
+          classroom_id: 'class3',
+          title: 'Database Systems',
+          description: 'Relational databases and SQL',
+          student_count: 5,
+          code: 'CS301'
         }
+      ];
+  
+      // Mock schedules data
+      const mockSchedules = [
+        {
+          id: 'schedule1',
+          course_id: 'course1',
+          course_title: 'Introduction to Computer Science',
+          day: 'Monday',
+          start_time: '09:00',
+          end_time: '11:00'
+        },
+        {
+          id: 'schedule2',
+          course_id: 'course2',
+          course_title: 'Data Structures',
+          day: 'Wednesday',
+          start_time: '13:00',
+          end_time: '15:00'
+        },
+        {
+          id: 'schedule3',
+          course_id: 'course3',
+          course_title: 'Database Systems',
+          day: 'Friday',
+          start_time: '10:00',
+          end_time: '12:00'
+        }
+      ];
+  
+      setLecturerCourses(mockCourses);
+      setSchedules(mockSchedules);
+      
+      // Select first course by default
+      if (mockCourses.length > 0) {
+        setSelectedCourse(mockCourses[0]);
       }
+  
     } catch (error) {
-      console.error('Error fetching lecturer data:', error);
-      Alert.alert('Error', 'Failed to load courses. Please try again later.');
+      console.error('Error loading mock data:', error);
+      Alert.alert('Error', 'Failed to load data.');
     } finally {
       setLoading(false);
     }
   };
-
+  
   const fetchAttendance = async (courseId) => {
     if (!courseId) return;
-
+  
     setLoadingAttendance(true);
     try {
-      const attendanceData = await getAttendance(courseId);
-      setAttendanceData(Array.isArray(attendanceData) ? attendanceData : []);
+      // Mock attendance data
+      const mockAttendance = [
+        {
+          student_id: 'student1',
+          student_name: 'John Doe',
+          matric: '2021/001',
+          attendance_count: 12,
+          absence_count: 2,
+          last_attended: '2023-05-15'
+        },
+        {
+          student_id: 'student2',
+          student_name: 'Jane Smith',
+          matric: '2021/002',
+          attendance_count: 10,
+          absence_count: 4,
+          last_attended: '2023-05-08'
+        },
+        {
+          student_id: 'student3',
+          student_name: 'Bob Johnson',
+          matric: '2021/003',
+          attendance_count: 14,
+          absence_count: 0,
+          last_attended: '2023-05-15'
+        },
+        {
+          student_id: 'student4',
+          student_name: 'Alice Brown',
+          matric: '2021/004',
+          attendance_count: 8,
+          absence_count: 6,
+          last_attended: '2023-04-24'
+        },
+        {
+          student_id: 'student5',
+          student_name: 'Charlie Wilson',
+          matric: '2021/005',
+          attendance_count: 11,
+          absence_count: 3,
+          last_attended: '2023-05-15'
+        }
+      ];
+  
+      setAttendanceData(mockAttendance);
+      
     } catch (error) {
-      console.error('Error fetching attendance:', error);
+      console.error('Error loading mock attendance:', error);
       Alert.alert('Error', 'Failed to load attendance data.');
     } finally {
       setLoadingAttendance(false);
     }
   };
-
   useEffect(() => {
-    console.log('Student profile:', studentProfile);
-    console.log('User:', user);
     fetchLecturerData();
   }, []);
 
@@ -79,6 +277,53 @@ const LecturerDashboard = ({ navigation }) => {
       fetchAttendance(selectedCourse.classroom_id);
     }
   }, [selectedCourse]);
+
+  useEffect(() => {
+    // Load cached attendances when the sync tab is selected
+    if (activeTab === 'autosync') {
+      // Add sample data for testing
+      const sampleAttendances = [
+        {
+          date: '2025-05-04',
+          students: [
+            { id: '1', name: 'John Doe', matric: '2021/001' },
+            { id: '2', name: 'Jane Smith', matric: '2021/002' },
+            { id: '3', name: 'Bob Johnson', matric: '2021/003' }
+          ],
+          synced: false
+        },
+        {
+          date: '2025-05-03',
+          students: [
+            { id: '4', name: 'Alice Brown', matric: '2021/004' },
+            { id: '5', name: 'Charlie Wilson', matric: '2021/005' }
+          ],
+          synced: false
+        },
+        {
+          date: '2025-05-02',
+          students: [
+            { id: '6', name: 'David Green', matric: '2021/006' },
+            { id: '7', name: 'Eva White', matric: '2021/007' },
+            { id: '8', name: 'Frank Black', matric: '2021/008' },
+            { id: '9', name: 'Grace Blue', matric: '2021/009' }
+          ],
+          synced: false
+        }
+      ];
+
+      // Combine sample data with actual data from store
+      const attendanceStore = useAttendanceStore.getState();
+      const allAttendances = attendanceStore.getAllAttendance();
+      const storeData = Object.entries(allAttendances).map(([date, students]) => ({
+        date,
+        students,
+        synced: false
+      }));
+
+      setCachedAttendances([...sampleAttendances, ...storeData]);
+    }
+  }, [activeTab]);
 
   // New function to handle the sync animation
   const handleSync = () => {
@@ -109,10 +354,9 @@ const LecturerDashboard = ({ navigation }) => {
     outputRange: ['0deg', '360deg'],
   });
 
-  const handleClassSelect = (classItem) => {
-    if (!classItem) return;
-    setSelectedCourse(classItem);
-    fetchAttendance(classItem.classroom_id);
+  const handleClassSelect = (course) => {
+    setSelectedCourse(course);
+    setIsCourseModalVisible(true);
   };
 
   const handleViewStudentAttendance = (studentId) => {
@@ -181,17 +425,16 @@ const LecturerDashboard = ({ navigation }) => {
       <Text style={styles.courseItemText}>{item.name || item.description || 'Untitled Course'}</Text>
     </TouchableOpacity>
   );
+  
 
   const renderLecturerCourseCard = (item) => (
-    <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+    <View style={styles.courseCardContainer}>
       <TouchableOpacity
-        style={[
-          styles.classCard,
-          selectedCourse?.id === item.id && styles.selectedClassCard,
-        ]}
-        onPress={() => handleClassSelect(item)}
-        onPressIn={handlePressIn}
-        onPressOut={handlePressOut}
+        style={styles.courseCard}
+        onPress={() => {
+          setSelectedCourse(item);
+          setIsCourseModalVisible(true);
+        }}
       >
         <View style={styles.classCardContent}>
           <View style={styles.classIconContainer}>
@@ -206,7 +449,18 @@ const LecturerDashboard = ({ navigation }) => {
           </View>
         </View>
       </TouchableOpacity>
-    </Animated.View>
+      
+      <TouchableOpacity
+        style={styles.startAttendanceButton}
+        onPress={() => navigation.navigate('LecturerScreen', {
+          courseId: item.id,
+          courseTitle: item.title || item.description || 'Course'
+        })}
+      >
+        <Text style={styles.startAttendanceButtonText}>Start Attendance</Text>
+        <Icon name="arrow-right" size={16} color={THEME.text} />
+      </TouchableOpacity>
+    </View>
   );
 
   const renderScheduleCard = ({ item, index }) => {
@@ -262,42 +516,23 @@ const LecturerDashboard = ({ navigation }) => {
     const attendancePercentage = item.attendance_count / (item.attendance_count + item.absence_count) * 100;
 
     return (
-      <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
-        <TouchableOpacity
-          style={[
-            styles.attendanceCard,
-            { borderLeftColor: attendancePercentage >= 75 ? THEME.success : attendancePercentage >= 50 ? THEME.warning : THEME.error }
-          ]}
-          onPress={() => studentId ? handleViewStudentAttendance(studentId) : null}
-          onPressIn={handlePressIn}
-          onPressOut={handlePressOut}
-        >
-          <View style={styles.attendanceCardContent}>
-            <View style={styles.studentIconContainer}>
-              <Icon name="account" size={24} color={THEME.text} />
+      <TouchableOpacity
+        style={[
+          styles.attendanceCard,
+          { borderLeftColor: attendancePercentage >= 75 ? THEME.success : attendancePercentage >= 50 ? THEME.warning : THEME.error }
+        ]}
+        onPress={() => studentId ? handleViewStudentAttendance(studentId) : null}
+      >
+        <View style={styles.attendanceCardContent}>
+          <View style={styles.studentInfo}>
+            <Text style={styles.studentName}>{item.student_name || 'Student'}</Text>
+            <View style={styles.attendanceProgress}>
+              <View style={[styles.progressBar, { width: `${attendancePercentage}%` }]} />
             </View>
-            <View style={styles.studentInfo}>
-              <Text style={styles.studentName}>{item.student_name || 'Student'}</Text>
-              <Text style={styles.studentId}>{studentId || 'ID unavailable'}</Text>
-              <View style={styles.attendanceProgress}>
-                <View style={[styles.progressBar, { width: `${attendancePercentage}%` }]} />
-                <Text style={styles.progressText}>{Math.round(attendancePercentage)}% attendance</Text>
-              </View>
-            </View>
+              <Text style={styles.progressText}>{Math.round(attendancePercentage)}% attendance</Text>
           </View>
-
-          <View style={styles.attendanceStats}>
-            <View style={styles.attendanceStat}>
-              <Text style={styles.attendanceStatValue}>{item.attendance_count || 0}</Text>
-              <Text style={styles.attendanceStatLabel}>Present</Text>
-            </View>
-            <View style={styles.attendanceStat}>
-              <Text style={styles.attendanceStatValue}>{item.absence_count || 0}</Text>
-              <Text style={styles.attendanceStatLabel}>Absent</Text>
-            </View>
-          </View>
-        </TouchableOpacity>
-      </Animated.View>
+        </View>
+      </TouchableOpacity>
     );
   };
 
@@ -347,6 +582,33 @@ const LecturerDashboard = ({ navigation }) => {
 
   // New render function for the sync tab
   const renderSyncTab = () => {
+    const handleSyncAll = () => {
+      setIsSyncing(true);
+      // Implement sync all logic here
+      setTimeout(() => {
+        setIsSyncing(false);
+        setSyncComplete(true);
+        // Reset after 3 seconds
+        setTimeout(() => setSyncComplete(false), 3000);
+      }, 2000);
+    };
+  
+    const handleSyncSingle = (date) => {
+      setIsSyncing(true);
+      // Implement single sync logic here
+      setTimeout(() => {
+        setIsSyncing(false);
+        setSyncComplete(true);
+        // Reset after 3 seconds
+        setTimeout(() => setSyncComplete(false), 3000);
+        
+        // Update the cached attendances to mark this one as synced
+        setCachedAttendances(prev => prev.map(item => 
+          item.date === date ? {...item, synced: true} : item
+        ));
+      }, 2000);
+    };
+  
     return (
       <View style={styles.syncContainer}>
         {isSyncing ? (
@@ -362,22 +624,101 @@ const LecturerDashboard = ({ navigation }) => {
             <Text style={styles.syncCompleteText}>All data synced to cloud!</Text>
           </View>
         ) : (
-          <View style={styles.syncContent}>
-            <TouchableOpacity
-              style={styles.syncButton}
-              onPress={handleSync}
-            >
-              <Icon name="cloud-sync" size={40} color={THEME.text} />
-              <Text style={styles.syncButtonText}>Sync Now</Text>
-            </TouchableOpacity>
-            <Text style={styles.syncInfoText}>
-              Sync your attendance data, schedules, and student information with the cloud database.
-            </Text>
+          <View style={{ flex: 1, width: '100%' }}>
+            <FlatList
+              data={cachedAttendances}
+              keyExtractor={(item) => item.date}
+              contentContainerStyle={styles.attendanceListContainer}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={[
+                    styles.attendanceItem,
+                    selectedAttendance === item.date && styles.selectedAttendanceItem,
+                    item.synced && styles.syncedItem
+                  ]}
+                  onPress={() => setSelectedAttendance(item.date)}
+                >
+                  <View style={styles.attendanceItemContent}>
+                    <Text style={styles.attendanceItemDate}>{item.date}</Text>
+                    <Text style={styles.attendanceItemStudents}>
+                      {item.students.length} students
+                    </Text>
+                    {item.synced && (
+                      <View style={styles.syncStatus}>
+                        <Icon name="check" size={16} color={THEME.success} />
+                        <Text style={styles.syncStatusText}>Synced</Text>
+                      </View>
+                    )}
+                  </View>
+                  <View style={styles.attendanceItemActions}>
+                    <TouchableOpacity
+                      style={[
+                        styles.syncButtonSmall,
+                        item.synced && { backgroundColor: THEME.success }
+                      ]}
+                      onPress={() => handleSyncSingle(item.date)}
+                      disabled={item.synced}
+                    >
+                      <Icon 
+                        name={item.synced ? "check" : "cloud-sync"} 
+                        size={20} 
+                        color={THEME.text} 
+                      />
+                    </TouchableOpacity>
+                  </View>
+                </TouchableOpacity>
+              )}
+              ListEmptyComponent={() => renderLecturerEmptyState('sync')}
+              ListHeaderComponent={
+                <Text style={styles.syncInfoText}>
+                  Sync your attendance data with the cloud database.
+                 
+                </Text>
+              }
+              ListFooterComponent={
+                <View style={styles.syncButtonContainer}>
+                  <TouchableOpacity
+                    style={styles.syncButton}
+                    onPress={handleSyncAll}
+                  >
+                    <Icon name="cloud-sync" size={24} color={THEME.text} />
+                    <Text style={styles.syncButtonText}>Sync All</Text>
+                  </TouchableOpacity>
+                </View>
+              }
+            />
           </View>
         )}
       </View>
     );
   };
+
+  const renderStudentCard = (item) => (
+    <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+      <TouchableOpacity
+        style={styles.attendanceCard}
+        onPress={() => handleViewStudentAttendance(item.id)}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+      >
+        <View style={styles.attendanceCardContent}>
+          <View style={styles.studentIconContainer}>
+            <Icon name="account" size={24} color={THEME.text} />
+          </View>
+          <View style={styles.studentInfo}>
+            <Text style={styles.studentName}>{item.name || 'Student'}</Text>
+            <Text style={styles.studentId}>{item.matric || 'ID unavailable'}</Text>
+            <Text style={styles.studentEmail}>{item.email || 'No email'}</Text>
+          </View>
+        </View>
+        <StatusBadge 
+          status={item.attendance_count / (item.attendance_count + item.absence_count) >= 0.75 ? 'good' : 
+                 item.attendance_count / (item.attendance_count + item.absence_count) >= 0.5 ? 'warning' : 'bad'}
+          // text={`${Math.round((item.attendance_count / (item.attendance_count + item.absence_count)) * 100)%`}
+        />
+      </TouchableOpacity>
+    </Animated.View>
+  )
 
   return (
     <View style={styles.container}>
@@ -423,47 +764,59 @@ const LecturerDashboard = ({ navigation }) => {
               <FlatList
                 data={lecturerCourses}
                 keyExtractor={(item, index) => `course-${item?.id || index}`}
-                horizontal
                 contentContainerStyle={styles.courseListContainer}
                 renderItem={({ item }) => renderLecturerCourseCard(item)}
                 ListEmptyComponent={() => renderLecturerEmptyState('courses')}
-                showsHorizontalScrollIndicator={false}
                 refreshing={loading}
                 onRefresh={fetchLecturerData}
               />
-
-              {selectedCourse && (
-                <>
-                  <View style={styles.attendanceHeaderContainer}>
-                    <View>
-                      <Text style={styles.attendanceSectionTitle}>
-                        Attendance for {selectedCourse.title || selectedCourse.description || 'Course'}
-                      </Text>
-                      <Text style={styles.attendanceSubtitle}>
-                        {attendanceData.length} students registered
-                      </Text>
-                    </View>
-                  </View>
-
-                  {loadingAttendance ? (
-                    <View style={styles.loaderContainer}>
-                      <ActivityIndicator size="small" color={THEME.accent} />
-                      <Text style={styles.loaderText}>Loading attendance data...</Text>
-                    </View>
-                  ) : (
-                    <FlatList
-                      data={attendanceData}
-                      keyExtractor={(item, index) => `attendance-${index}-${item?.student_id || 'unknown'}`}
-                      contentContainerStyle={styles.attendanceListContainer}
-                      renderItem={renderAttendanceRecord}
-                      ListEmptyComponent={() => renderLecturerEmptyState('attendance')}
-                      refreshing={loadingAttendance}
-                      onRefresh={() => fetchAttendance(selectedCourse.classroom_id)}
-                    />
-                  )}
-                </>
-              )}
             </>
+          )}
+
+          {isCourseModalVisible && (
+            <Modal
+              visible={isCourseModalVisible}
+              onRequestClose={() => setIsCourseModalVisible(false)}
+              animationType="slide"
+              transparent={true}
+            >
+              <View style={styles.modalContainer}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                  <Text style={styles.modalTitle}>{selectedCourse?.title || 'Course Details'}</Text>
+                  <TouchableOpacity onPress={() => setIsCourseModalVisible(false)}>
+                    <Icon name="close" size={24} color={THEME.text} />
+                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.attendanceHeaderContainer}>
+                  <View>
+                    <Text style={styles.attendanceSectionTitle}>
+                      Attendance for {selectedCourse?.title || selectedCourse?.description || 'Course'}
+                    </Text>
+                    <Text style={styles.attendanceSubtitle}>
+                      {attendanceData.length} students registered
+                    </Text>
+                  </View>
+                </View>
+
+                {loadingAttendance ? (
+                  <View style={styles.loaderContainer}>
+                    <ActivityIndicator size="small" color={THEME.accent} />
+                    <Text style={styles.loaderText}>Loading attendance data...</Text>
+                  </View>
+                ) : (
+                  <FlatList
+                    data={attendanceData}
+                    keyExtractor={(item, index) => `attendance-${index}-${item?.student_id || 'unknown'}`}
+                    contentContainerStyle={styles.attendanceListContainer}
+                    renderItem={renderAttendanceRecord}
+                    ListEmptyComponent={() => renderLecturerEmptyState('attendance')}
+                    refreshing={loadingAttendance}
+                    onRefresh={() => fetchAttendance(selectedCourse?.classroom_id)}
+                  />
+                )}
+              </View>
+            </Modal>
           )}
 
           {activeTab === 'students' && (
@@ -595,6 +948,49 @@ const LecturerDashboard = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
+  attendanceListContainer: {
+    flex: 1,
+    padding: SPACING.lg,
+  },
+  attendanceItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: SPACING.md,
+    marginVertical: SPACING.sm,
+    backgroundColor: THEME.card,
+    borderRadius: SPACING.sm,
+    borderWidth: 1,
+    borderColor: THEME.border,
+  },
+  selectedAttendanceItem: {
+    borderWidth: 2,
+    borderColor: THEME.accent,
+  },
+  attendanceItemContent: {
+    flex: 1,
+  },
+  attendanceItemDate: {
+    fontSize: FONT_SIZES.md,
+    fontWeight: '600',
+    color: THEME.text,
+  },
+  attendanceItemStudents: {
+    fontSize: FONT_SIZES.sm,
+    color: THEME.textSecondary,
+  },
+  attendanceItemActions: {
+    alignItems: 'center',
+  },
+  syncButtonContainer: {
+    marginVertical: SPACING.lg,
+    alignItems: 'center',
+  },
+  syncButtonSmall: {
+    padding: SPACING.sm,
+    borderRadius: SPACING.sm,
+    backgroundColor: THEME.accent,
+    alignItems: 'center',
+  },
   container: {
     flex: 1,
     backgroundColor: THEME.darker,
@@ -669,28 +1065,17 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontFamily: FONTS.medium,
   },
-  classCard: {
+  courseCard: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     padding: SPACING.md,
     backgroundColor: THEME.card,
     borderRadius: 12,
-    marginRight: SPACING.md,
     marginBottom: SPACING.md,
-    borderLeftWidth: 3,
-    borderLeftColor: THEME.textSecondary,
-    width: 280,
     elevation: 2,
   },
-  selectedClassCard: {
-    backgroundColor: THEME.cardDark,
-    borderLeftColor: THEME.accent,
-    shadowColor: THEME.accent,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 3,
-    elevation: 4,
+  courseListContainer: {
+    paddingBottom: SPACING.md,
   },
   classCardContent: {
     flexDirection: 'row',
@@ -731,11 +1116,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: SPACING.md,
-    marginTop: SPACING.sm,
+    marginBottom: SPACING.sm,
     paddingVertical: SPACING.sm,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255,255,255,0.1)',
+  },
+  courseListContainer: {
+    paddingBottom: SPACING.sm,
   },
   attendanceSectionTitle: {
     color: THEME.text,
@@ -796,6 +1183,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
+  },
+  studentEmail: {
+    color: THEME.textSecondary,
+    fontSize: FONT_SIZES.sm,
+    fontFamily: FONTS.regular,
   },
   studentIconContainer: {
     width: 40,
@@ -972,69 +1364,91 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
   },
-  // New styles for sync functionality
   syncContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: SPACING.lg,
-  },
-  syncContent: {
-    alignItems: 'center',
-    padding: SPACING.lg,
-  },
-  syncIcon: {
-    fontSize: 48,
-    color: THEME.accent,
-    marginVertical: SPACING.md,
-  },
-  syncText: {
-    fontSize: FONT_SIZES.lg,
-    fontFamily: FONTS.medium,
-    color: THEME.accent,
-    textAlign: 'center',
-    marginTop: SPACING.md,
-  },
-  syncCompleteText: {
-    fontSize: FONT_SIZES.lg,
-    fontFamily: FONTS.medium,
-    color: THEME.success,
-    textAlign: 'center',
-    marginTop: SPACING.md,
-  },
-  syncProgress: {
-    width: '100%',
-    height: 4,
-    backgroundColor: THEME.darker,
-    borderRadius: 2,
-    overflow: 'hidden',
-    marginTop: SPACING.sm,
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: THEME.accent,
-  },
-  syncButton: {
-    backgroundColor: THEME.accent,
-    padding: SPACING.md,
-    borderRadius: 8,
-    marginTop: SPACING.lg,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  syncButtonText: {
-    color: THEME.text,
-    fontSize: FONT_SIZES.md,
-    fontFamily: FONTS.medium,
-    marginLeft: SPACING.sm,
-  },
-  syncInfoText: {
-    color: THEME.textSecondary,
-    fontSize: FONT_SIZES.sm,
-    textAlign: 'center',
-    marginTop: SPACING.md,
-    paddingHorizontal: SPACING.lg,
-  },
+  flex: 1,
+  backgroundColor: THEME.darker,
+},
+syncedItem: {
+  borderLeftWidth: 4,
+  borderLeftColor: THEME.success,
+},
+syncStatusText: {
+  fontSize: FONT_SIZES.xs,
+  color: THEME.success,
+  marginLeft: SPACING.xs,
+},
+
+syncButton: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  backgroundColor: THEME.accent,
+  paddingVertical: SPACING.md,
+  paddingHorizontal: SPACING.lg,
+  borderRadius: 8,
+  width: '100%',
+  justifyContent: 'center',
+},
+syncButtonText: {
+  color: THEME.text,
+  fontSize: FONT_SIZES.md,
+  fontWeight: '600',
+  marginLeft: SPACING.sm,
+},
+syncInfoText: {
+  color: THEME.textSecondary,
+  fontSize: FONT_SIZES.sm,
+  textAlign: 'center',
+  marginBottom: SPACING.lg,
+  paddingHorizontal: SPACING.md,
+},
+syncAnimationContainer: {
+  flex: 1,
+  justifyContent: 'center',
+  alignItems: 'center',
+},
+progressContainer: {
+  marginTop: SPACING.md,
+},
+syncContext: {
+  flex: 1,
+  justifyContent: 'center',
+  alignItems: 'center',
+},
+syncText: {
+  color: THEME.text,
+  fontSize: FONT_SIZES.md,
+  fontWeight: '600',
+  marginLeft: SPACING.sm,
+},
+courseCardContainer: {
+  position: 'relative',
+  marginRight: SPACING.md,
+  marginBottom: SPACING.lg,
+},
+
+startAttendanceButton: {
+  position: 'absolute',
+  bottom: -SPACING.sm, // Half outside the card
+  right: SPACING.md,
+  backgroundColor: THEME.accent,
+  flexDirection: 'row',
+  alignItems: 'center',
+  paddingVertical: SPACING.sm,
+  paddingHorizontal: SPACING.md,
+  borderRadius: 20,
+  elevation: 3,
+  shadowColor: THEME.accent,
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.3,
+  shadowRadius: 4,
+},
+startAttendanceButtonText: {
+  color: THEME.text,
+  fontWeight: '600',
+  fontSize: FONT_SIZES.sm,
+  marginRight: SPACING.xs,
+},
+
 });
 
 export default LecturerDashboard;

@@ -33,8 +33,8 @@ type LoginScreenProps = {
 };
 
 const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
-  const [email, setEmail] = useState('test@gmail.com');
-  const [password, setPassword] = useState('test123456');
+  const [email, setEmail] = useState('lectpro@example.com');
+  const [password, setPassword] = useState('lectpro14');
   const [isLoading, setIsLoading] = useState(false);
 
   const { setUser, setToken, setStudentProfile, setLecturerProfile, setMacAddress } = useAuthStore();
