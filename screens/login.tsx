@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -11,15 +11,10 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import { baseURL, loginUser } from '../apis';
-import { useAuthStore } from '../store/authStore';
-import { useUIStore } from '../store/uiStore';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import DeviceInfo from 'react-native-device-info';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { THEME, SPACING, FONTS, FONT_SIZES } from '../theme';
 import { SCREEN_NAMES } from '../navigation/config';
-import ZeroconfTest from './ZeroconfTest';
+import { useAuthHandler } from '../custom-hooks/useAuthHandler';
 
 type RootStackParamList = {
   [SCREEN_NAMES.LOGIN]: undefined;
@@ -33,178 +28,35 @@ type LoginScreenProps = {
 };
 
 const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
-  const [email, setEmail] = useState('lectpro@example.com');
-  const [password, setPassword] = useState('lectpro14');
-  const [isLoading, setIsLoading] = useState(false);
-
-  const { setUser, setToken, setStudentProfile, setLecturerProfile, setMacAddress } = useAuthStore();
-  const { setIsStudent } = useUIStore();
-
-  const handleLogin = async () => {
-    if (!email || !password) {
-      Alert.alert('Error', 'Please fill in all fields');
-      return;
-    }
-  
-    setIsLoading(true);
-  
-    try {
-      // First login to get the token
-      const loginResponse = await loginUser({ username: email, password });
-      console.log(loginResponse)
-  
-      if (loginResponse?.access_token) {
-        const token = loginResponse.access_token;
-        setToken(token);
-        await AsyncStorage.setItem('access_token', token);
-  
-        // Test the token to get user profile
-        const response = await fetch(
-          `${baseURL}/auth/login/test-token`,
-          {
-            method: 'POST',
-            headers: { 
-              'accept': 'application/json',
-              'Authorization': `Bearer ${token}`
-            }
-          }
-        );
-
-        console.log("response-token", response)
-  
-        if (!response.ok) {
-          throw new Error('Failed to get user profile');
-        }
-  
-        const profile = await response.json();
-  
-        if (profile) {
-          const isStudent = profile.role === 'student';
-  
-          // Set user in Zustand store matching UserProfile type
-          setUser({
-            id: profile.id,
-            name: `${profile.first_name} ${profile.last_name}`,
-            email: profile.email,
-            profileType: profile.role as 'student' | 'lecturer'
-          });
-  
-          // Set isStudent based on role
-          setIsStudent(isStudent);
-  
-          // Save user to AsyncStorage
-          await AsyncStorage.setItem(
-            'user',
-            JSON.stringify({
-              id: profile.id,
-              name: `${profile.first_name} ${profile.last_name}`,
-              email: profile.email,
-              profileType: profile.role
-            })
-          );
-  
-          // If user is a student, set up student profile
-          if (isStudent) {
-            const deviceId = await DeviceInfo.getUniqueId();
-            
-            const studentProfile = {
-              matricNumber: null,
-              deviceId: deviceId,
-              facultyId: null,
-              departmentId: null,
-              phoneNumber: null,
-              dateOfBirth: null
-            };
-  
-            setStudentProfile(studentProfile);
-            await AsyncStorage.setItem('studentProfile', JSON.stringify(studentProfile));
-          } else if (profile.role === 'lecturer') {
-            // If user is a lecturer, set up lecturer profile
-            const lecturerProfile = {
-              facultyId: profile.faculty_id,
-              phoneNumber: profile.phone_number,
-              departmentId: profile.department_id,
-              staffId: profile.staff_id,
-              dateOfBirth: profile.date_of_birth,
-              id: profile.id,
-              userId: profile.user_id
-            };
-  
-            setLecturerProfile(lecturerProfile);
-            await AsyncStorage.setItem('lecturerProfile', JSON.stringify(lecturerProfile));
-          }
-  
-          // Save MAC address
-          const macAddress = await DeviceInfo.getMacAddress();
-          setMacAddress(macAddress);
-          await AsyncStorage.setItem('macAddress', macAddress);
-  
-          // Reset navigation stack to MainTabs with fromLogin parameter
-          navigation.reset({
-            index: 0,
-            routes: [{ 
-              name: SCREEN_NAMES.MAIN_TABS,
-              params: { fromLogin: true }
-            }],
-          });
-        }
-      }
-    } catch (error) {
-      console.error('Login Failed:', error);
-      Alert.alert('Error', 'Invalid email or password');
-    } finally {
-      setIsLoading(false);
-    }
+  const navigateToMainTabs = (fromLogin: boolean = false) => {
+    navigation.reset({
+      index: 0,
+      routes: [{ 
+        name: SCREEN_NAMES.MAIN_TABS,
+        ...(fromLogin && { params: { fromLogin: true } }) 
+      }],
+    });
   };
 
-  const handleQuickUse = async () => {
-    setIsLoading(true);
+  const {
+    email,
+    setEmail,
+    password,
+    setPassword,
+    isLoading,
+    error,
+    handleLogin,
+    handleQuickUse,
+  } = useAuthHandler(
+    () => navigateToMainTabs(true),
+    () => navigateToMainTabs(false)
+  );
 
-    try {
-      const dummyToken = 'dummy-token';
-      const dummyUser = {
-        id: 'test-id',
-        name: 'Test User',
-        email: 'test@gmail.com',
-        profileType: 'student' as const
-      };
-
-      const deviceId = await DeviceInfo.getUniqueId();
-      const dummyStudentProfile = {
-        matricNumber: null,
-        deviceId: deviceId,
-        facultyId: null,
-        departmentId: null,
-        phoneNumber: null,
-        dateOfBirth: null
-      };
-
-      // Set Zustand stores
-      setToken(dummyToken);
-      setUser(dummyUser);
-      setIsStudent(true);
-      setStudentProfile(dummyStudentProfile);
-
-      // Save to AsyncStorage
-      await AsyncStorage.setItem('access_token', dummyToken);
-      await AsyncStorage.setItem('user', JSON.stringify(dummyUser));
-      await AsyncStorage.setItem('studentProfile', JSON.stringify(dummyStudentProfile));
-
-      const macAddress = await DeviceInfo.getMacAddress();
-      setMacAddress(macAddress);
-      await AsyncStorage.setItem('macAddress', macAddress);
-
-      navigation.reset({
-        index: 0,
-        routes: [{ name: SCREEN_NAMES.MAIN_TABS }],
-      });
-    } catch (error) {
-      console.error('Quick Use Failed:', error);
-      Alert.alert('Error', 'Failed to set up quick use.');
-    } finally {
-      setIsLoading(false);
+  React.useEffect(() => {
+    if (error) {
+      Alert.alert('Login Error', error);
     }
-  };
+  }, [error]);
 
   return (
     <KeyboardAvoidingView
@@ -245,18 +97,20 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
           )}
         </TouchableOpacity>
 
-      
+        <TouchableOpacity
+          style={[styles.button, styles.secondaryButton]}
+          onPress={handleQuickUse}
+          disabled={isLoading}
+        >
+          <Text style={styles.buttonText}>Quick Use</Text>
+        </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.registerButton}
           onPress={() => navigation.navigate(SCREEN_NAMES.REGISTER)}
         >
-          <Text style={styles.registerButtonText}>
-            Don't have an account? <Text style={styles.registerButtonTextBold}>Register</Text>
-          </Text>
+          <Text style={styles.registerButtonText}>Don't have an account? <Text style={styles.registerLink}>Register</Text></Text>
         </TouchableOpacity>
-
-       
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -312,17 +166,8 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontFamily: FONTS.medium,
   },
-  quickUseButton: {
+  secondaryButton: {
     backgroundColor: THEME.card,
-    borderRadius: 8,
-    padding: SPACING.md,
-    alignItems: 'center',
-    marginBottom: SPACING.xl,
-  },
-  quickUseButtonText: {
-    color: THEME.textSecondary,
-    fontSize: FONT_SIZES.md,
-    fontFamily: FONTS.regular,
   },
   registerButton: {
     alignItems: 'center',
@@ -332,7 +177,7 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZES.md,
     fontFamily: FONTS.regular,
   },
-  registerButtonTextBold: {
+  registerLink: {
     color: THEME.accent,
     fontFamily: FONTS.bold,
   },

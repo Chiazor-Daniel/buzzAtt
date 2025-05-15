@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,50 +11,38 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import { registerUser, loginUser } from '../apis';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SCREEN_NAMES } from '../navigation/config';
+import { THEME, SPACING, FONTS, FONT_SIZES } from '../theme';
+import { useRegistrationHandler } from '../custom-hooks/useRegistrationHandler';
+import { StackNavigationProp } from '@react-navigation/stack';
 
-const THEME = {
-  dark: '#1A1A1A',
-  darker: '#121212',
-  accent: '#7C4DFF',
-  accentLight: '#9E7BFF',
-  card: '#242424',
-  text: '#FFFFFF',
-  textSecondary: '#B3B3B3',
-  success: '#4CAF50',
-  error: '#F44336',
+// Define a ParamList relevant to the auth flow
+type AuthStackParamList = {
+  [SCREEN_NAMES.LOGIN]: undefined; // Navigates to Login
+  [SCREEN_NAMES.REGISTER]: undefined; // Current screen
+  // Add other auth-flow screens if necessary, e.g., ForgotPassword
 };
 
-const RegisterScreen = ({ navigation }) => {
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
+interface RegisterScreenProps {
+  navigation: StackNavigationProp<AuthStackParamList, typeof SCREEN_NAMES.REGISTER>;
+}
 
-  const handleRegister = async () => {
-    if (!email || !password) {
-      Alert.alert('Error', 'Email and password are required');
-      return;
-    }
-
-    if (password.length < 8) {
-      Alert.alert('Error', 'Password must be at least 8 characters long');
-      return;
-    }
-
-    try {
-      setLoading(true);
-      await registerUser({
-        email,
-        password,
-        first_name: firstName,
-        last_name: lastName,
-      });
-      
+const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
+  const {
+    firstName,
+    setFirstName,
+    lastName,
+    setLastName,
+    email,
+    setEmail,
+    password,
+    setPassword,
+    loading,
+    error,
+    handleRegister,
+    clearError,
+  } = useRegistrationHandler({
+    onRegistrationSuccess: () => {
       Alert.alert(
         'Registration Successful',
         'Your account has been created successfully. You can now login and create your profile.',
@@ -66,27 +54,14 @@ const RegisterScreen = ({ navigation }) => {
         ],
         { cancelable: false }
       );
-    } catch (error) {
-      console.error('Registration error:', error);
-      let errorMessage = 'Registration failed. Please try again.';
-        
-      if (error.response?.data) {
-        if (Array.isArray(error.response.data.detail)) {
-          errorMessage = error.response.data.detail.join('\n');
-        } else if (typeof error.response.data.detail === 'string') {
-          errorMessage = error.response.data.detail;
-        }
-      }
+    },
+  });
 
-      Alert.alert(
-        'Registration Failed',
-        errorMessage,
-        [{ text: 'OK' }]
-      );
-    } finally {
-      setLoading(false);
+  useEffect(() => {
+    if (error) {
+      Alert.alert('Registration Failed', error, [{ text: 'OK', onPress: clearError }]);
     }
-  };
+  }, [error, clearError]);
 
   return (
     <KeyboardAvoidingView
@@ -149,7 +124,7 @@ const RegisterScreen = ({ navigation }) => {
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>Already have an account?</Text>
-          <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+          <TouchableOpacity onPress={() => navigation.navigate(SCREEN_NAMES.LOGIN)}>
             <Text style={styles.footerLink}>Login</Text>
           </TouchableOpacity>
         </View>

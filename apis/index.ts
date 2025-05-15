@@ -15,9 +15,9 @@ const api = axios.create({
   timeout: 30000, // 30 second timeout
   withCredentials: true,
   // Allow self-signed certificates and HTTPS issues
-  https: {
-    rejectUnauthorized: false
-  }
+  // https: {
+  //   rejectUnauthorized: false
+  // }
 });
 
 // Add request interceptor for authentication
@@ -61,7 +61,7 @@ api.interceptors.response.use(
 );
 
 // Auth Endpoints
-export const loginUser = async (credentials) => {
+export const loginUser = async (credentials: { username: string; password: string; device_id?: string }) => {
   const data = {
     grant_type: 'password',
     username: credentials.username,
@@ -137,7 +137,7 @@ export const createProfile = async (profileType: 'student' | 'lecturer', profile
   return response.data;
 };
 
-export const getProfile = async (profileType) => {
+export const getProfile = async (profileType: 'student' | 'lecturer') => {
   let endpoint = '';
   if (profileType === 'student') {
     endpoint = '/student/profile/';
@@ -157,7 +157,7 @@ export const getStudentClassroom = async () => {
   return response.data;
 };
 
-export const enrollInClass = async (availableClassId) => {
+export const enrollInClass = async (availableClassId: string) => {
   const response = await api.post('/student/course/', null, {
     params: { available_class_id: availableClassId }
   });
@@ -269,13 +269,13 @@ export const removeAvailableClass = async (availableClassId: string) => {
 };
 
 export const getEligibleStudents = async (classroomId: string) => {
-  const response = await api.get(`/student/course/${classroom_id}/eligible-students`);
+  const response = await api.get(`/student/course/${classroomId}/eligible-students`);
   return response.data;
 };
 
 // Course Management Endpoints
 export const addAvailableClass = async (classroomId: string, studentId: string) => {
-  const response = await api.post(`/course/available/${classroom_id}/student/${student_id}`);
+  const response = await api.post(`/course/available/${classroomId}/student/${studentId}`);
   return response.data;
 };
 
@@ -298,6 +298,34 @@ export const updateSchedule = async (scheduleId: string, scheduleData: any) => {
 export const deleteSchedule = async (scheduleId: string) => {
   const response = await api.delete(`/schedule/${scheduleId}`);
   return response.data;
+};
+
+export const fetchUserProfile = async (token: string) => {
+  try {
+    const response = await fetch(
+      `${baseURL}/auth/login/test-token`, // Ensure baseURL is correctly defined and accessible
+      {
+        method: 'POST',
+        headers: {
+          'accept': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      // You might want to throw a more specific error or return a standardized error object
+      const errorData = await response.json().catch(() => ({ detail: 'Failed to parse error response' }));
+      console.error('Fetch user profile error:', response.status, errorData);
+      throw new Error(errorData.detail || `Failed to get user profile. Status: ${response.status}`);
+    }
+
+    const profile = await response.json();
+    return profile; // This should be of a defined type, e.g., UserProfile
+  } catch (error) {
+    console.error('Error in fetchUserProfile:', error);
+    throw error; // Re-throw the error to be caught by the caller
+  }
 };
 
 export default api;

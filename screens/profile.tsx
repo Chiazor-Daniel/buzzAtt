@@ -1,21 +1,17 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
-  Image,
   ScrollView,
-  Alert,
   ActivityIndicator,
   RefreshControl,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useAuthStore } from '../store/authStore';
-import { useUIStore } from '../store/uiStore';
 import { THEME, SPACING, FONTS, FONT_SIZES } from '../theme';
 import { SCREEN_NAMES } from '../navigation/config';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useProfileHandler } from '../custom-hooks/useProfileHandler';
 
 type RootStackParamList = {
   [SCREEN_NAMES.LOGIN]: undefined;
@@ -27,33 +23,22 @@ type ProfileScreenProps = {
 };
 
 const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
-  const { user, studentProfile, lecturerProfile, clearUser, clearToken, clearMacAddress, clearStudentProfile, clearLecturerProfile } = useAuthStore();
-  const { isStudent } = useUIStore();
-  const [isLoading, setIsLoading] = useState(false);
+  const {
+    user,
+    studentProfile,
+    lecturerProfile,
+    isStudent,
+    isLoading,
+    handleLogout,
+  } = useProfileHandler();
 
-  const handleLogout = async () => {
-    try {
-      setIsLoading(true);
-      // Clear AsyncStorage
-      await AsyncStorage.clear();
-
-      // Clear Zustand stores
-      clearUser();
-      clearToken();
-      clearMacAddress();
-      clearStudentProfile();
-      clearLecturerProfile();
-
-      // Navigate to the login screen
+  const onLogout = async () => {
+    const success = await handleLogout();
+    if (success) {
       navigation.reset({
         index: 0,
         routes: [{ name: SCREEN_NAMES.LOGIN }],
       });
-    } catch (error) {
-      console.error('Error during logout:', error);
-      Alert.alert('Error', 'Failed to log out. Please try again.');
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -127,22 +112,9 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
         <Text style={styles.value}>
           {isStudent ? studentProfile?.dateOfBirth : lecturerProfile?.dateOfBirth || 'N/A'}
         </Text>
-
-        {/* Show create profile button if faculty_id or department_id is empty */}
-        {/* {(!isStudent && (!lecturerProfile?.facultyId || !lecturerProfile?.departmentId)) || 
-         (isStudent && (!studentProfile?.facultyId || !studentProfile?.departmentId)) ? (
-          <TouchableOpacity 
-            style={styles.createProfileButton}
-            onPress={() => navigation.navigate(SCREEN_NAMES.CREATE_PROFILE)}
-          >
-            <Text style={styles.createProfileButtonText}>
-              Create Profile
-            </Text>
-          </TouchableOpacity>
-        ) : null} */}
       </View>
 
-      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+      <TouchableOpacity style={styles.logoutButton} onPress={onLogout}>
         <Text style={styles.logoutButtonText}>Logout</Text>
       </TouchableOpacity>
     </ScrollView>
@@ -178,13 +150,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: SPACING.xl,
   },
-  profilePicture: {
-    width: 150,
-    height: 150,
-    borderRadius: 75,
-    borderWidth: 3,
-    borderColor: THEME.accent,
-  },
   infoContainer: {
     backgroundColor: THEME.card,
     borderRadius: 12,
@@ -200,7 +165,6 @@ const styles = StyleSheet.create({
   value: {
     color: THEME.text,
     fontSize: FONT_SIZES.md,
-    fontWeight: '600',
     marginBottom: SPACING.md,
     fontFamily: FONTS.medium,
   },
@@ -213,20 +177,6 @@ const styles = StyleSheet.create({
   logoutButtonText: {
     color: THEME.text,
     fontSize: FONT_SIZES.md,
-    fontWeight: '600',
-    fontFamily: FONTS.medium,
-  },
-  createProfileButton: {
-    backgroundColor: THEME.accent,
-    padding: SPACING.md,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: SPACING.md,
-  },
-  createProfileButtonText: {
-    color: THEME.text,
-    fontSize: FONT_SIZES.md,
-    fontWeight: '600',
     fontFamily: FONTS.medium,
   },
 });
